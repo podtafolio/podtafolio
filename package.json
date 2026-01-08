@@ -10,7 +10,8 @@
     "postinstall": "nuxt prepare",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx server/scripts/seed.ts"
   },
   "dependencies": {
     "@nuxt/image": "^2.0.0",
@@ -20,12 +21,14 @@
     "better-sqlite3": "^12.5.0",
     "drizzle-orm": "^0.45.1",
     "nuxt": "^4.2.2",
+    "rss-parser": "^3.13.0",
     "typescript": "^5.9.3",
     "vue": "^3.5.26",
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "drizzle-kit": "^0.31.8"
+    "drizzle-kit": "^0.31.8",
+    "tsx": "^4.21.0"
   }
 }
