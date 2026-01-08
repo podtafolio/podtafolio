@@ -1,7 +1,8 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { ulid } from 'ulid';
 
 export const podcasts = sqliteTable('podcasts', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+  id: text('id').primaryKey().$defaultFn(() => ulid()),
   title: text('title').notNull(),
   description: text('description'),
   feedUrl: text('feed_url').notNull().unique(),
@@ -14,8 +15,8 @@ export const podcasts = sqliteTable('podcasts', {
 });
 
 export const episodes = sqliteTable('episodes', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  podcastId: integer('podcast_id').references(() => podcasts.id).notNull(),
+  id: text('id').primaryKey().$defaultFn(() => ulid()),
+  podcastId: text('podcast_id').references(() => podcasts.id).notNull(),
   title: text('title').notNull(),
   description: text('description'),
   audioUrl: text('audio_url').notNull(),
