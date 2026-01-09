@@ -1,0 +1,9 @@
+node_modules
+.output
+.git
+.nuxt
+.env
+dist
+server/database/*.sqlite
+server/database/*.sqlite-journal
+tests
