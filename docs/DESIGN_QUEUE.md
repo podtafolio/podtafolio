@@ -27,29 +27,24 @@ We will implement a persistent job queue using the existing Turso (SQLite) datab
 
 ### 2. Abstraction: Job Registry
 
-We will create a structured way to define job handlers.
+We will create a structured way to define job handlers and their configuration.
 
 **File Structure:**
 ```
 server/
   jobs/
-    index.ts          # The Registry (maps type -> handler)
+    index.ts          # The Registry (maps type -> { handler, concurrency })
     podcastImport.ts  # Handler for 'podcast_import'
     ...future jobs
-```
-
-**Interface:**
-```typescript
-interface JobHandler<T> {
-  handle: (payload: T) => Promise<void>;
-}
 ```
 
 **Registry (`server/jobs/index.ts`):**
 ```typescript
 const jobRegistry = {
-  'podcast_import': podcastImportHandler,
-  // 'other_job': otherJobHandler
+  'podcast_import': {
+    handler: podcastImportHandler,
+    concurrency: 3 // Max 3 concurrent imports
+  },
 };
 ```
 
@@ -63,18 +58,21 @@ await enqueueJob('podcast_import', { podcastId: '...' });
 A Nitro server plugin (`server/plugins/worker.ts`) starts a polling loop.
 
 #### Algorithm:
-1. **Poll**: Query `jobs` where `status = 'pending'`.
-2. **Claim**: Transactionally lock the job (`status = 'processing'`).
-3. **Dispatch**: Look up `job.type` in `jobRegistry`.
-   - If found: `await handler(job.payload)`
-   - If not found: Mark as failed (unknown job type).
-4. **Complete/Fail**: Update `jobs` table based on result.
+1. **Check Capacity**: Query `jobs` table for count of active (`processing`) jobs per type.
+   - Active jobs exclude "stuck" jobs (those processing > 5 minutes).
+2. **Determine Allowed**: Compare active counts against `concurrency` limits in Registry.
+3. **Poll & Claim**: Try to claim a `pending` job (or reclaim a stuck job) *only* for allowed types.
+   - Use atomic transaction (`UPDATE ... RETURNING` or explicit transaction).
+4. **Spawn**: If a job is claimed, spawn the handler asynchronously (do not block the loop).
+   - The loop immediately continues to try filling other slots.
+5. **Complete/Fail**: When the handler finishes, update the job status in the DB.
 
 ### 5. Concurrency Control
-- Single worker loop initially (processing one job at a time).
-- Can be scaled by adding more worker loops or processes, provided the "Claim" step is atomic.
+- Concurrency limits are defined per job type in the Registry.
+- The worker respects these limits by checking the global state in the database before claiming new work.
+- "Stuck" jobs (jobs marked processing for > 5 mins) are not counted against the limit, allowing them to be reclaimed/retried even if the limit appears full.
 
 ### 6. Integration Changes
 - `server/api/podcasts/import.post.ts`: Uses `enqueueJob`.
-- `server/utils/queue.ts`: Queue DB operations.
-- `server/jobs/`: New directory for handlers.
+- `server/utils/queue.ts`: Queue DB operations (enqueue, claim, complete, fail, getCounts).
+- `server/jobs/`: Directory for handlers and configuration.
