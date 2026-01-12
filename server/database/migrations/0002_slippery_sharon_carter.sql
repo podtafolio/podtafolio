@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `unique_episode` ON `episodes` (`podcast_id`,`guid`);
