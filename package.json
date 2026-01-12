@@ -13,11 +13,12 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.0",
     "@nuxt/image": "^2.0.0",
     "@nuxt/scripts": "^0.13.2",
     "@nuxt/ui": "^4.3.0",
     "@unhead/vue": "^2.1.1",
-    "better-sqlite3": "^12.5.0",
+    "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "nuxt": "^4.2.2",
     "rss-parser": "^3.13.0",
@@ -27,7 +28,6 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "drizzle-kit": "^0.31.8"
   }
 }
