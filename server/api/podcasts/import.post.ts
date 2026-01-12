@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import { podcasts } from '../../database/schema'
 import { eq } from 'drizzle-orm'
-import { importPodcast } from '../../utils/podcastService'
 import { db } from '../../utils/db'
+import { enqueueJob } from '../../utils/queue'
 
 const importBodySchema = z.object({
   feedUrl: z.string().url()
@@ -39,9 +39,8 @@ export default defineEventHandler(async (event) => {
             .set({ status: 'importing', importError: null, updatedAt: new Date() })
             .where(eq(podcasts.id, existingPodcast.id));
 
-        importPodcast(feedUrl, existingPodcast.id).catch(err => {
-            console.error('Background import retry failed trigger:', err)
-        })
+        // Enqueue job instead of direct promise
+        await enqueueJob('podcast_import', { podcastId: existingPodcast.id, feedUrl });
 
         return {
             id: existingPodcast.id,
@@ -65,10 +64,8 @@ export default defineEventHandler(async (event) => {
   }).returning({ id: podcasts.id, status: podcasts.status })
 
   // 4. Trigger background import
-  // Do not await this
-  importPodcast(feedUrl, newPodcast.id).catch(err => {
-    console.error('Background import failed trigger:', err)
-  })
+  // Enqueue job
+  await enqueueJob('podcast_import', { podcastId: newPodcast.id, feedUrl });
 
   return {
     id: newPodcast.id,

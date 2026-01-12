@@ -30,3 +30,15 @@ export const episodes = sqliteTable('episodes', {
 }, (table) => ({
   uniqueEpisode: uniqueIndex('unique_episode').on(table.podcastId, table.guid),
 }));
+
+export const jobs = sqliteTable('jobs', {
+  id: text('id').primaryKey().$defaultFn(() => ulid()),
+  type: text('type').notNull(),
+  payload: text('payload', { mode: 'json' }).notNull(),
+  status: text('status', { enum: ['pending', 'processing', 'completed', 'failed'] }).notNull().default('pending'),
+  error: text('error'),
+  retries: integer('retries').notNull().default(0),
+  startedAt: integer('started_at', { mode: 'timestamp' }),
+  completedAt: integer('completed_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
