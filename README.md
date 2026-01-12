@@ -1,6 +1,28 @@
-# Nuxt Minimal Starter
+# Podtafolio
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+**Podtafolio** is a podcast discovery platform designed to provide deep insights into audio content. The platform aims to revolutionize how users discover and consume podcasts by leveraging AI for transcriptions, summaries, and analysis.
+
+## Core Goals
+
+- **Discovery**: Facilitate the discovery of new and relevant podcasts.
+- **AI Integration**:
+    - **Transcriptions**: Full text transcriptions of podcast episodes.
+    - **Summaries**: AI-generated summaries to give users a quick overview.
+    - **Analysis**: Deep analysis of content, sentiment, and topics.
+    - **Search**: Advanced AI-powered search to find specific topics or quotes within episodes.
+- **Analytics & Trends**: Provide data-driven insights on podcast trends and listener analytics.
+
+## Tech Stack
+
+The project is built using the following technologies:
+
+- **Framework**: [Nuxt 4](https://nuxt.com)
+- **UI Framework**: [Nuxt UI](https://ui.nuxt.com) (based on Tailwind CSS)
+- **Language**: TypeScript
+- **Dependencies**:
+    - `@nuxt/image`: For optimized image handling.
+    - `@nuxt/scripts`: For third-party script management.
+    - `vue`: Vue 3.
 
 ## Setup
 
@@ -38,6 +60,24 @@ yarn dev
 bun run dev
 ```
 
+## Testing
+
+Run the test suite:
+
+```bash
+# npm
+npm run test
+
+# pnpm
+pnpm test
+
+# yarn
+yarn test
+
+# bun
+bun run test
+```
+
 ## Production
 
 Build the application for production:
@@ -72,4 +112,11 @@ yarn preview
 bun run preview
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+## Directory Structure
+
+- `app/`: Contains the main application source code (pages, components, layouts, `app.vue`).
+- `public/`: Static assets that are served directly.
+- `server/`: Server-side logic, API routes, and database interactions.
+- `tests/`: Unit and integration tests.
+
+For more information, check out the [Nuxt documentation](https://nuxt.com/docs).
