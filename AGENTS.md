@@ -1,5 +1,14 @@
 # AGENTS.md
 
+## ⚠️ Mandatory Verification Rules
+
+**Before creating any commit or Pull Request, you MUST perform the following checks:**
+
+1.  **Run Tests**: Execute `npm run test` and ensure all tests pass.
+2.  **Build**: Execute `npm run build` to ensure the application builds without errors.
+
+**Do not submit any code that fails these checks.**
+
 ## Project Overview
 **Podtafolio** is a podcast discovery platform designed to provide deep insights into audio content. The platform aims to revolutionize how users discover and consume podcasts by leveraging AI for transcriptions, summaries, and analysis.
 
@@ -26,7 +35,8 @@ The project is built using the following technologies:
 The project follows the standard Nuxt 4 structure:
 - `app/`: Contains the main application source code (pages, components, layouts, `app.vue`).
 - `public/`: Static assets that are served directly.
-- `server/`: (To be added) Server-side logic, API routes, and database interactions.
+- `server/`: Server-side logic, API routes (`api/`), database schemas (`database/`), and utilities (`utils/`).
+- `tests/`: Unit and integration tests.
 
 ## Coding Guidelines
 
@@ -50,9 +60,8 @@ The project follows the standard Nuxt 4 structure:
 ## Development Workflow
 1.  **Install Dependencies**: `npm install`
 2.  **Start Dev Server**: `npm run dev`
-3.  **Build for Production**: `npm run build`
+3.  **Run Tests**: `npm run test`
+4.  **Build for Production**: `npm run build`
 
 ## Future Implementation Notes
 - **AI Services**: When implementing AI features, consider modularizing the service interactions (e.g., OpenAI, Anthropic, or custom models) in the `server/` directory.
-- **Database**: A database will be required for storing user data, podcast metadata, and cached transcriptions.
-- **Testing**: Implement unit and integration tests using libraries compatible with Nuxt/Vue (e.g., Vitest).
