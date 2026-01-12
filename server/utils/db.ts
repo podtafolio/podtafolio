@@ -1,11 +1,14 @@
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/libsql';
+import { createClient } from '@libsql/client';
 import * as schema from '../database/schema';
-import { join } from 'path';
 
-// Construct the absolute path to the database file
-// This ensures it works correctly regardless of where the process is started from
-const dbPath = process.env.DB_PATH || join(process.cwd(), 'server', 'database', 'db.sqlite');
+if (!process.env.TURSO_DATABASE_URL) {
+  throw new Error('TURSO_DATABASE_URL is not defined');
+}
 
-const sqlite = new Database(dbPath);
-export const db = drizzle(sqlite, { schema });
+const turso = createClient({
+  url: process.env.TURSO_DATABASE_URL,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
+
+export const db = drizzle(turso, { schema });
