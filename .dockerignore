@@ -6,4 +6,3 @@ node_modules
 dist
 server/database/*.sqlite
 server/database/*.sqlite-journal
-tests
