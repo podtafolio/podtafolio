@@ -2,5 +2,13 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxt/image', '@nuxt/ui', '@nuxt/scripts']
+  modules: ['@nuxt/image', '@nuxt/ui', '@nuxt/scripts'],
+  nitro: {
+    experimental: {
+      tasks: true
+    },
+    scheduledTasks: {
+      '0 * * * *': ['sync-podcasts']
+    }
+  }
 })
