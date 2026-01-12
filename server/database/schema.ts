@@ -21,6 +21,7 @@ export const episodes = sqliteTable('episodes', {
   podcastId: text('podcast_id').references(() => podcasts.id).notNull(),
   title: text('title').notNull(),
   description: text('description'),
+  imageUrl: text('image_url'),
   audioUrl: text('audio_url').notNull(),
   publishedAt: integer('published_at', { mode: 'timestamp' }),
   duration: integer('duration'), // Seconds

@@ -29,6 +29,13 @@
       "when": 1768221644533,
       "tag": "0003_blushing_agent_zero",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1768224188282,
+      "tag": "0004_silly_terrax",
+      "breakpoints": true
     }
   ]
 }

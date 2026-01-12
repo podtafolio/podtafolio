@@ -1,0 +1,1 @@
+ALTER TABLE `episodes` ADD `image_url` text;
