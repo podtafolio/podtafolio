@@ -12,6 +12,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Run tests
+RUN npm run test
+
 # Build the Nuxt application
 RUN npm run build
 
