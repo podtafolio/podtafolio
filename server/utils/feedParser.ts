@@ -4,6 +4,7 @@ export interface EpisodeFeedData {
   title: string;
   description?: string;
   audioUrl: string;
+  imageUrl?: string;
   publishedAt?: Date;
   duration?: number; // Seconds
   guid: string;
@@ -95,10 +96,23 @@ export async function parsePodcastFeed(feedUrl: string): Promise<PodcastFeedData
         return null;
       }
 
+        // Extract episode image
+        let episodeImageUrl: string | undefined;
+        // @ts-ignore
+        if (item.itunesImage && item.itunesImage['$'] && item.itunesImage['$'].href) {
+            // @ts-ignore
+            episodeImageUrl = item.itunesImage['$'].href;
+        } else if (item.image?.url) {
+             episodeImageUrl = item.image.url;
+        } else if (item.itunes?.image) { // sometimes parser puts it here
+             episodeImageUrl = item.itunes.image;
+        }
+
       return {
         title: item.title,
         description: item.contentSnippet || item.content || item.description,
         audioUrl: item.enclosure.url,
+          imageUrl: episodeImageUrl,
         publishedAt: item.isoDate ? new Date(item.isoDate) : (item.pubDate ? new Date(item.pubDate) : undefined),
         duration: parseDuration(item.itunesDuration || item.duration),
         guid: item.guid,
