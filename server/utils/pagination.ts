@@ -1,4 +1,5 @@
 import { type H3Event, getQuery } from 'h3'
+import { z } from 'zod'
 
 export interface PaginationParams {
   page: number
@@ -16,15 +17,17 @@ export interface PaginatedResponse<T> {
   }
 }
 
+const paginationSchema = z.object({
+  page: z.coerce.number().int().min(1).catch(1),
+  limit: z.coerce.number().int().min(1).catch(30)
+})
+
 export function getPaginationParams(event: H3Event): PaginationParams {
   const query = getQuery(event)
 
-  let page = parseInt(String(query.page ?? '1'))
-  if (isNaN(page) || page < 1) page = 1
+  const result = paginationSchema.parse(query)
 
-  let limit = parseInt(String(query.limit ?? '30'))
-  if (isNaN(limit) || limit < 1) limit = 30
-
+  const { page, limit } = result
   const offset = (page - 1) * limit
 
   return { page, limit, offset }
