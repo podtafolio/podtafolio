@@ -57,6 +57,13 @@
       "when": 1768383242143,
       "tag": "0007_strange_layla_miller",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1768398787174,
+      "tag": "0008_thin_drax",
+      "breakpoints": true
     }
   ]
 }

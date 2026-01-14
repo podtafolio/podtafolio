@@ -1,4 +1,4 @@
-export async function transcribeAudio(audioBuffer: Buffer, filename: string): Promise<{ text: string, language: string }> {
+export async function transcribeAudio(audioBuffer: Buffer, filename: string): Promise<{ text: string, language: string, segments: any[] }> {
   const apiKey = process.env.GROQ_API_KEY;
 
   if (!apiKey) {
@@ -9,7 +9,7 @@ export async function transcribeAudio(audioBuffer: Buffer, filename: string): Pr
   const blob = new Blob([audioBuffer]);
   formData.append('file', blob, filename);
   formData.append('model', 'whisper-large-v3');
-  // Use verbose_json to ensure we get the language field
+  // Use verbose_json to ensure we get the language field and segments
   formData.append('response_format', 'verbose_json');
 
   const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
@@ -30,5 +30,6 @@ export async function transcribeAudio(audioBuffer: Buffer, filename: string): Pr
   return {
     text: result.text,
     language: result.language || 'en',
+    segments: result.segments || [],
   };
 }
