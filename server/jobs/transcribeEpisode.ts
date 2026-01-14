@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { db } from "../utils/db";
 import { episodes, transcripts } from "../database/schema";
 import { eq, and } from "drizzle-orm";
@@ -9,6 +10,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
+=======
+import { db } from '../utils/db';
+import { episodes, transcripts } from '../database/schema';
+import { eq, and } from 'drizzle-orm';
+import { transcribeAudio } from '../utils/groq';
+import { uploadFileToStorage, deleteFileFromStorage } from '../utils/storage';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { pipeline } from 'node:stream/promises';
+import { Readable } from 'node:stream';
+>>>>>>> origin/main
 
 export interface TranscribeEpisodePayload {
   episodeId: string;
