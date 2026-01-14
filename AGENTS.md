@@ -10,58 +10,82 @@
 **Do not submit any code that fails these checks.**
 
 ## Project Overview
-**Podtafolio** is a podcast discovery platform designed to provide deep insights into audio content. The platform aims to revolutionize how users discover and consume podcasts by leveraging AI for transcriptions, summaries, and analysis.
+**Podtafolio** is a podcast discovery platform utilizing AI for deep audio insights.
 
-### Core Goals
-- **Discovery**: Facilitate the discovery of new and relevant podcasts.
-- **AI Integration**:
-    - **Transcriptions**: Full text transcriptions of podcast episodes.
-    - **Summaries**: AI-generated summaries to give users a quick overview.
-    - **Analysis**: Deep analysis of content, sentiment, and topics.
-    - **Search**: Advanced AI-powered search to find specific topics or quotes within episodes.
-- **Analytics & Trends**: Provide data-driven insights on podcast trends and listener analytics.
+### Architecture & Status
+- **Status**: Active Development.
+- **Backend**: Nuxt 4 Server (Nitro).
+- **Database**: Turso (LibSQL) with Drizzle ORM.
+- **Async Processing**: Custom SQLite-backed job queue (`jobs` table) + Nitro Worker Plugin.
+- **AI**: Groq API (Whisper Large v3) for transcriptions.
 
 ## Tech Stack
-The project is built using the following technologies:
 - **Framework**: [Nuxt 4](https://nuxt.com)
-- **UI Framework**: [Nuxt UI](https://ui.nuxt.com) (based on Tailwind CSS)
-- **Language**: TypeScript
-- **Dependencies**:
-    - `@nuxt/image`: For optimized image handling.
-    - `@nuxt/scripts`: For third-party script management.
-    - `vue`: Vue 3.
+- **UI Framework**: [Nuxt UI](https://ui.nuxt.com)
+- **Database**: Drizzle ORM + Turso
+- **Testing**: Vitest + Happy DOM
+
+## Developer Guidelines
+
+### Database Workflow
+This project uses **Drizzle ORM** with a strict migration workflow.
+- **Do NOT use `db:push`**. It has been removed.
+- **To modify the schema**:
+    1. Edit `server/database/schema.ts`.
+    2. Run `npm run db:generate` to create a new migration file.
+    3. Run `npm run db:migrate` to apply the migration.
+
+### Testing Guidelines (Vitest)
+This project uses `vitest` with `happy-dom`. Special care must be taken when testing Nuxt/Nitro server code due to auto-imports.
+
+#### Mocking H3 Composables
+When testing utilities that use H3 composables (e.g., `createError`, `getQuery`), you must explicitly mock the `h3` module to ensure Vitest uses your mock instead of the auto-imported version.
+
+```typescript
+// Example: Testing a utility that uses createError
+import { describe, it, expect, vi } from 'vitest'
+import { myUtility } from './myUtility'
+
+vi.mock('h3', () => ({
+  createError: vi.fn((opts) => opts),
+  getQuery: vi.fn(() => ({})),
+}))
+
+describe('myUtility', () => {
+  // ... tests
+})
+```
+
+#### Mocking Nitro Auto-Imports
+For server handlers using Nitro features like `defineCachedEventHandler`, use `vi.stubGlobal`.
+
+```typescript
+// Example: Testing a cached event handler
+import { describe, it, expect, vi } from 'vitest'
+
+vi.stubGlobal('defineCachedEventHandler', (handler) => handler)
+
+// Import your handler AFTER stubbing
+import handler from './my-handler'
+```
+
+#### Mocking Local Utilities
+When testing API handlers that import local utilities (e.g., `server/utils/cache.ts`), ensure the source code uses **explicit relative imports** (e.g., `import ... from '../../utils/cache'`) rather than auto-imports, or the mock might be ignored.
+
+### Async Jobs & Background Workers
+- **Location**: `server/jobs/` contains job definitions.
+- **Worker**: `server/plugins/worker.ts` is the polling worker that processes jobs.
+- **Tasks**: `server/tasks/` contains scheduled Nitro tasks (e.g., `sync-podcasts`).
+- **Adding a Job**: Register the job type and handler in `server/jobs/index.ts`.
 
 ## Directory Structure
-The project follows the standard Nuxt 4 structure:
-- `app/`: Contains the main application source code (pages, components, layouts, `app.vue`).
-- `public/`: Static assets that are served directly.
-- `server/`: Server-side logic, API routes (`api/`), database schemas (`database/`), and utilities (`utils/`).
-- `tests/`: Unit and integration tests.
-
-## Coding Guidelines
-
-### General
-- **TypeScript**: All code must be written in TypeScript.
-- **Vue**: Use the **Composition API** with `<script setup lang="ts">`.
-- **Styling**: Utilize **Tailwind CSS** utility classes provided by Nuxt UI. Avoid custom CSS when possible.
-
-### Components
-- Place reusable components in `app/components/`.
-- Use descriptive naming for components (e.g., `PodcastCard.vue`, `SearchBar.vue`).
-
-### Pages
-- Page components go in `app/pages/`.
-- Use Nuxt's file-based routing system.
-
-### State Management
-- Use `useState` for simple shared state.
-- (Future) Consider Pinia for complex state management if needed.
-
-## Development Workflow
-1.  **Install Dependencies**: `npm install`
-2.  **Start Dev Server**: `npm run dev`
-3.  **Run Tests**: `npm run test`
-4.  **Build for Production**: `npm run build`
+- `app/`: Frontend (Nuxt UI, Pages, Components).
+- `server/`: Backend.
+    - `database/`: Schema & Migrations.
+    - `jobs/`: Job definitions.
+    - `tasks/`: Scheduled tasks.
+    - `utils/`: Shared logic (iTunes, Parsing, Cache).
+- `tests/`: Vitest suite.
 
 ## Future Implementation Notes
-- **AI Services**: When implementing AI features, consider modularizing the service interactions (e.g., OpenAI, Anthropic, or custom models) in the `server/` directory.
+- **AI Services**: Summaries and Deep Analysis are planned. Implement them as modular services in `server/utils/ai/`.

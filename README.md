@@ -1,28 +1,58 @@
 # Podtafolio
 
+![Status](https://img.shields.io/badge/Status-Active_Development-green)
+
 **Podtafolio** is a podcast discovery platform designed to provide deep insights into audio content. The platform aims to revolutionize how users discover and consume podcasts by leveraging AI for transcriptions, summaries, and analysis.
 
-## Core Goals
+## Features
 
-- **Discovery**: Facilitate the discovery of new and relevant podcasts.
-- **AI Integration**:
-    - **Transcriptions**: Full text transcriptions of podcast episodes.
-    - **Summaries**: AI-generated summaries to give users a quick overview.
-    - **Analysis**: Deep analysis of content, sentiment, and topics.
-    - **Search**: Advanced AI-powered search to find specific topics or quotes within episodes.
-- **Analytics & Trends**: Provide data-driven insights on podcast trends and listener analytics.
+### Current Features
+- **Hybrid Search**: Unified search across local database and iTunes API, ensuring immediate results with local data precedence.
+- **Podcast Management**:
+    - **Import**: Asynchronous background processing for importing large podcast feeds.
+    - **Sync**: Automated hourly synchronization to keep feeds up-to-date.
+- **AI Transcriptions**: High-fidelity episode transcriptions powered by the **Groq API** (using `whisper-large-v3`).
+- **Discovery**: Filter and browse podcasts and episodes.
+
+### Roadmap
+- **Summaries**: AI-generated summaries for quick episode overviews.
+- **Deep Analysis**: Sentiment analysis, topic extraction, and entity recognition.
+- **Semantic Search**: AI-powered search to find specific quotes or concepts within episodes.
+- **Analytics**: User listening trends and data visualization.
+
+## Architecture
+
+Podtafolio uses a modern, robust architecture designed for performance and scalability:
+
+- **Framework**: [Nuxt 4](https://nuxt.com)
+- **Database**: [Turso](https://turso.tech/) (LibSQL) accessed via **Drizzle ORM**.
+- **Job Queue**: Custom SQLite-backed job queue for handling asynchronous tasks (imports, transcriptions).
+- **UI**: [Nuxt UI](https://ui.nuxt.com) (Tailwind CSS).
+- **AI Inference**: Groq API.
 
 ## Tech Stack
 
-The project is built using the following technologies:
-
-- **Framework**: [Nuxt 4](https://nuxt.com)
-- **UI Framework**: [Nuxt UI](https://ui.nuxt.com) (based on Tailwind CSS)
 - **Language**: TypeScript
+- **Backend**: Nuxt Server (Nitro)
+- **Database**: Drizzle ORM, LibSQL/Turso
 - **Dependencies**:
-    - `@nuxt/image`: For optimized image handling.
-    - `@nuxt/scripts`: For third-party script management.
-    - `vue`: Vue 3.
+    - `rss-parser`: Robust RSS feed parsing.
+    - `zod`: Runtime schema validation.
+    - `ofetch`: HTTP client.
+    - `@nuxt/image`: Optimized image handling.
+
+## Configuration
+
+The application requires the following environment variables to be set (typically in a `.env` file):
+
+```env
+# Database Connection (Turso)
+TURSO_DATABASE_URL="libsql://your-db-name.turso.io"
+TURSO_AUTH_TOKEN="your-turso-auth-token"
+
+# AI Services
+GROQ_API_KEY="your-groq-api-key"
+```
 
 ## Setup
 
@@ -40,6 +70,20 @@ yarn install
 
 # bun
 bun install
+```
+
+## Database
+
+This project uses Drizzle ORM.
+
+**Generate Migrations:**
+```bash
+npm run db:generate
+```
+
+**Apply Migrations:**
+```bash
+npm run db:migrate
 ```
 
 ## Development Server
@@ -96,27 +140,16 @@ yarn build
 bun run build
 ```
 
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
 ## Directory Structure
 
 - `app/`: Contains the main application source code (pages, components, layouts, `app.vue`).
 - `public/`: Static assets that are served directly.
-- `server/`: Server-side logic, API routes, and database interactions.
+- `server/`: Server-side logic.
+    - `api/`: API route handlers.
+    - `database/`: Schema definitions and migrations.
+    - `jobs/`: Background job definitions (imports, transcriptions).
+    - `tasks/`: Scheduled Nitro tasks (e.g., sync).
+    - `utils/`: Shared utilities.
 - `tests/`: Unit and integration tests.
 
 For more information, check out the [Nuxt documentation](https://nuxt.com/docs).
