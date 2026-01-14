@@ -17,3 +17,5 @@ const uiHandler = serverAdapter.registerHandlers();
 export const redirectToBullboard = async (event: H3Event) => {
   return await uiHandler.handler(event);
 };
+
+export default defineEventHandler(redirectToBullboard);
