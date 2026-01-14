@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { db } from "../utils/db";
 import { episodes, transcripts } from "../database/schema";
 import { eq, and } from "drizzle-orm";
@@ -10,29 +9,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
-=======
-import { db } from '../utils/db';
-import { episodes, transcripts } from '../database/schema';
-import { eq, and } from 'drizzle-orm';
-import { transcribeAudio } from '../utils/groq';
-import { uploadFileToStorage, deleteFileFromStorage } from '../utils/storage';
-import crypto from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
-import { pipeline } from 'node:stream/promises';
-import { Readable } from 'node:stream';
->>>>>>> origin/main
 
 export interface TranscribeEpisodePayload {
   episodeId: string;
 }
 
 export async function transcribeEpisodeHandler(
-  payload: TranscribeEpisodePayload
+  payload: TranscribeEpisodePayload,
 ) {
   const { episodeId } = payload;
   console.log(
-    `[Transcription] Starting transcription for episode ${episodeId}`
+    `[Transcription] Starting transcription for episode ${episodeId}`,
   );
 
   // 1. Fetch episode to get audio URL
@@ -54,7 +41,7 @@ export async function transcribeEpisodeHandler(
 
   if (!audioResponse.ok || !audioResponse.body) {
     throw new Error(
-      `Failed to download audio: ${audioResponse.status} ${audioResponse.statusText}`
+      `Failed to download audio: ${audioResponse.status} ${audioResponse.statusText}`,
     );
   }
 
@@ -109,13 +96,13 @@ export async function transcribeEpisodeHandler(
   const existingTranscript = await db.query.transcripts.findFirst({
     where: and(
       eq(transcripts.episodeId, episodeId),
-      eq(transcripts.audioHash, hash)
+      eq(transcripts.audioHash, hash),
     ),
   });
 
   if (existingTranscript) {
     console.log(
-      `[Transcription] Transcript already exists for this audio version (hash: ${hash}). Skipping.`
+      `[Transcription] Transcript already exists for this audio version (hash: ${hash}). Skipping.`,
     );
     // Cleanup temp file
     fs.unlinkSync(tempFilePath);
@@ -140,8 +127,8 @@ export async function transcribeEpisodeHandler(
     if (fileSizeInBytes > MAX_FILE_SIZE) {
       console.log(
         `[Transcription] File size (${(fileSizeInBytes / 1024 / 1024).toFixed(
-          2
-        )}MB) exceeds 25MB. Uploading to R2...`
+          2,
+        )}MB) exceeds 25MB. Uploading to R2...`,
       );
 
       const contentType =
@@ -162,10 +149,10 @@ export async function transcribeEpisodeHandler(
         const publicUrl = await uploadFileToStorage(
           fileBuffer,
           storageKey,
-          contentType
+          contentType,
         );
         console.log(
-          `[Transcription] Uploaded to ${publicUrl}. Calling Groq with URL...`
+          `[Transcription] Uploaded to ${publicUrl}. Calling Groq with URL...`,
         );
 
         const result = await transcribeAudio(publicUrl);
@@ -179,13 +166,13 @@ export async function transcribeEpisodeHandler(
         } catch (cleanupError) {
           console.error(
             `[Transcription] Failed to delete temporary file ${storageKey}:`,
-            cleanupError
+            cleanupError,
           );
         }
       }
     } else {
       console.log(
-        `[Transcription] File size is small. Calling Groq directly...`
+        `[Transcription] File size is small. Calling Groq directly...`,
       );
       // Read file buffer
       const fileBuffer = fs.readFileSync(tempFilePath);
@@ -196,7 +183,7 @@ export async function transcribeEpisodeHandler(
     }
 
     console.log(
-      `[Transcription] Transcription complete. Language: ${language}, Length: ${text.length}, Segments: ${segments.length}`
+      `[Transcription] Transcription complete. Language: ${language}, Length: ${text.length}, Segments: ${segments.length}`,
     );
 
     // 5. Insert into transcripts table

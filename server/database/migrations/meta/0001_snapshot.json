@@ -84,12 +84,8 @@
           "name": "episodes_podcast_id_podcasts_id_fk",
           "tableFrom": "episodes",
           "tableTo": "podcasts",
-          "columnsFrom": [
-            "podcast_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["podcast_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -190,9 +186,7 @@
       "indexes": {
         "podcasts_feed_url_unique": {
           "name": "podcasts_feed_url_unique",
-          "columns": [
-            "feed_url"
-          ],
+          "columns": ["feed_url"],
           "isUnique": true
         }
       },
