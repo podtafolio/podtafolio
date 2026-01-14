@@ -1,14 +1,16 @@
-import { db } from '../utils/db';
-import { episodes, transcripts, summaries } from '../database/schema';
-import { eq } from 'drizzle-orm';
-import { google } from '../utils/ai';
-import { generateText } from 'ai';
+import { db } from "../utils/db";
+import { episodes, transcripts, summaries } from "../database/schema";
+import { eq } from "drizzle-orm";
+import { google } from "../utils/ai";
+import { generateText } from "ai";
 
 export interface SummarizeEpisodePayload {
   episodeId: string;
 }
 
-export async function summarizeEpisodeHandler(payload: SummarizeEpisodePayload) {
+export async function summarizeEpisodeHandler(
+  payload: SummarizeEpisodePayload,
+) {
   const { episodeId } = payload;
   console.log(`[Summary] Starting summary for episode ${episodeId}`);
 
@@ -18,7 +20,9 @@ export async function summarizeEpisodeHandler(payload: SummarizeEpisodePayload) 
   });
 
   if (!transcript) {
-    throw new Error(`Transcript for episode ${episodeId} not found. Please transcribe first.`);
+    throw new Error(
+      `Transcript for episode ${episodeId} not found. Please transcribe first.`,
+    );
   }
 
   // 2. Fetch episode details for context
@@ -27,7 +31,7 @@ export async function summarizeEpisodeHandler(payload: SummarizeEpisodePayload) 
   });
 
   if (!episode) {
-      throw new Error(`Episode ${episodeId} not found`);
+    throw new Error(`Episode ${episodeId} not found`);
   }
 
   // 3. Prepare Prompt
@@ -35,10 +39,14 @@ export async function summarizeEpisodeHandler(payload: SummarizeEpisodePayload) 
 
   let contentInput = "";
   if (segments && Array.isArray(segments) && segments.length > 0) {
-      contentInput = segments.map(s => `[${formatTime(s.start)}] ${s.text}`).join('\n');
+    contentInput = segments
+      .map((s) => `[${formatTime(s.start)}] ${s.text}`)
+      .join("\n");
   } else {
-      contentInput = transcript.content;
-      console.warn(`[Summary] No segments found for episode ${episodeId}, using plain text.`);
+    contentInput = transcript.content;
+    console.warn(
+      `[Summary] No segments found for episode ${episodeId}, using plain text.`,
+    );
   }
 
   const prompt = `
@@ -61,31 +69,32 @@ ${contentInput}
 
   // 4. Call AI
   try {
-      const { text } = await generateText({
-        model: google('gemini-3-flash-preview'),
-        prompt: prompt,
-      });
+    const { text } = await generateText({
+      model: google("gemini-3-flash-preview"),
+      prompt: prompt,
+    });
 
-      // 5. Save Summary
-      // Delete existing summary if any
-      await db.delete(summaries).where(eq(summaries.episodeId, episodeId));
+    // 5. Save Summary
+    // Delete existing summary if any
+    await db.delete(summaries).where(eq(summaries.episodeId, episodeId));
 
-      await db.insert(summaries).values({
-          episodeId,
-          content: text,
-      });
+    await db.insert(summaries).values({
+      episodeId,
+      content: text,
+    });
 
-      console.log(`[Summary] Summary generated and saved.`);
+    console.log(`[Summary] Summary generated and saved.`);
   } catch (error: any) {
-      console.error("[Summary] Error generating summary:", error);
-      throw error;
+    console.error("[Summary] Error generating summary:", error);
+    throw error;
   }
 }
 
 function formatTime(seconds: number): string {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0)
+    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }

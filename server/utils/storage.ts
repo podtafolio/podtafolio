@@ -1,7 +1,7 @@
 const getPublicDomain = () => {
   const publicDomain = process.env.R2_PUBLIC_DOMAIN;
   if (!publicDomain) {
-    throw new Error('Missing R2 environment variable: R2_PUBLIC_DOMAIN');
+    throw new Error("Missing R2 environment variable: R2_PUBLIC_DOMAIN");
   }
   return publicDomain;
 };
@@ -12,14 +12,14 @@ const getPublicDomain = () => {
 export async function uploadFileToStorage(
   data: Buffer | ArrayBuffer | string,
   key: string,
-  contentType: string
+  contentType: string,
 ): Promise<string> {
   // Use Nitro's storage abstraction
   // The 'files' mount point is configured in nuxt.config.ts
-  const storage = useStorage('files');
+  const storage = useStorage("files");
 
   // Ensure key doesn't start with / as unstorage keys are usually "cleaned"
-  const cleanKey = key.startsWith('/') ? key.substring(1) : key;
+  const cleanKey = key.startsWith("/") ? key.substring(1) : key;
 
   // setItem simply saves the value. The S3 driver handles the PUT.
   // Note: Standard unstorage S3 driver might not set Content-Type automatically based on argument,
@@ -37,11 +37,11 @@ export async function uploadFileToStorage(
 
   // Construct public URL
   let domain = getPublicDomain();
-  if (!domain.startsWith('http')) {
+  if (!domain.startsWith("http")) {
     domain = `https://${domain}`;
   }
   // Ensure no trailing slash
-  domain = domain.replace(/\/$/, '');
+  domain = domain.replace(/\/$/, "");
 
   return `${domain}/${cleanKey}`;
 }
@@ -50,8 +50,8 @@ export async function uploadFileToStorage(
  * Deletes a file from R2 via Nitro storage.
  */
 export async function deleteFileFromStorage(key: string): Promise<void> {
-  const storage = useStorage('files');
-  const cleanKey = key.startsWith('/') ? key.substring(1) : key;
+  const storage = useStorage("files");
+  const cleanKey = key.startsWith("/") ? key.substring(1) : key;
 
   await storage.removeItem(cleanKey);
 }
