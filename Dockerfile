@@ -10,7 +10,7 @@ RUN corepack enable
 COPY package.json yarn.lock ./
 
 # Install dependencies (including dev dependencies for build)
-RUN --mount=type=cache,target=/root/.yarn YARN_CACHE_FOLDER=/root/.yarn yarn install
+RUN --mount=type=cache,target=/root/.yarn YARN_CACHE_FOLDER=/root/.yarn yarn install --immutable
 
 # Copy source code
 COPY . .

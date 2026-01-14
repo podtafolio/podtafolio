@@ -8768,6 +8768,7 @@ __metadata:
     nuxt: "npm:^4.2.2"
     ofetch: "npm:^1.5.1"
     rss-parser: "npm:^3.13.0"
+    tailwindcss: "npm:^4.1.18"
     typescript: "npm:^5.9.3"
     ulid: "npm:^3.0.2"
     vitest: "npm:^3.2.4"
