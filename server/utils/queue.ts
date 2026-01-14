@@ -12,8 +12,8 @@ for (const type of ALL_JOBS) {
     connection: getRedisConnection(),
     defaultJobOptions: {
       removeOnComplete: 100, // Keep last 100 completed jobs
-      removeOnFail: 500,     // Keep last 500 failed jobs
-      attempts: 3,           // Default retry attempts
+      removeOnFail: 500, // Keep last 500 failed jobs
+      attempts: 3, // Default retry attempts
       backoff: {
         type: "exponential",
         delay: 1000,
