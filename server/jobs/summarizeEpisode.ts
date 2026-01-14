@@ -49,6 +49,7 @@ Your task is to write a comprehensive blog post summary of this episode.
 Requirements:
 - Structure it like a blog post with a catchy title, introduction, key topics/takeaways, and a conclusion.
 - Use Markdown formatting (headers, bullet points, etc.).
+- Use double line breaks between paragraphs to ensure clear separation.
 - Write the summary in ${transcript.language}.
 - Analyze the topics discussed in depth.
 - IMPORTANT: Use footnotes to cite the timestamps of important phrases or topics discussed. Use the format [^timestamp] where timestamp is in MM:SS or HH:MM:SS format.

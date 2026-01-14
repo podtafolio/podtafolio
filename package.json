@@ -37,6 +37,7 @@
   },
   "devDependencies": {
     "@nuxt/test-utils": "^3.23.0",
+    "@tailwindcss/typography": "^0.5.19",
     "@vue/test-utils": "^2.4.6",
     "drizzle-kit": "^0.31.8",
     "happy-dom": "^20.1.0",
