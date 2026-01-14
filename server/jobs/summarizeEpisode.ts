@@ -10,7 +10,7 @@ export interface SummarizeEpisodePayload {
 }
 
 export async function summarizeEpisodeHandler(
-  job: Job<SummarizeEpisodePayload>,
+  job: Job<SummarizeEpisodePayload>
 ) {
   const { episodeId } = job.data;
   await job.log(`[Summary] Starting summary for episode ${episodeId}`);
@@ -22,7 +22,7 @@ export async function summarizeEpisodeHandler(
 
   if (!transcript) {
     throw new Error(
-      `Transcript for episode ${episodeId} not found. Please transcribe first.`,
+      `Transcript for episode ${episodeId} not found. Please transcribe first.`
     );
   }
 
@@ -46,7 +46,7 @@ export async function summarizeEpisodeHandler(
   } else {
     contentInput = transcript.content;
     await job.log(
-      `[Summary] No segments found for episode ${episodeId}, using plain text.`,
+      `[Summary] No segments found for episode ${episodeId}, using plain text.`
     );
   }
 
@@ -61,8 +61,8 @@ Requirements:
 - Use double line breaks between paragraphs to ensure clear separation.
 - Write the summary in ${transcript.language}.
 - Analyze the topics discussed in depth.
-- IMPORTANT: Use footnotes to cite the timestamps of important phrases or topics discussed. Use the format [^timestamp] where timestamp is in MM:SS or HH:MM:SS format.
-- At the end of the post, list the footnotes in a section called "Timestamp References".
+- IMPORTANT: Use footnotes to cite specific phrases or quotes from the transcript. Use the format [^N] where N is a number (1, 2, 3, etc.).
+- At the end of the post, include a "Timestamp References" section where each footnote shows the timestamp and the exact quoted phrase, formatted as: [^N]: [MM:SS] "exact phrase from transcript"
 
 Here is the transcript (with timestamps if available):
 ${contentInput}
@@ -87,7 +87,7 @@ ${contentInput}
     await job.log(`[Summary] Summary generated and saved.`);
   } catch (error: any) {
     await job.log(
-      "Error: [Summary] Error generating summary: " + String(error),
+      "Error: [Summary] Error generating summary: " + String(error)
     );
     throw error;
   }
@@ -98,6 +98,8 @@ function formatTime(seconds: number): string {
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
   if (h > 0)
-    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    return `${h}:${m.toString().padStart(2, "0")}:${s
+      .toString()
+      .padStart(2, "0")}`;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
