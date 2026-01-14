@@ -187,7 +187,7 @@ describe("transcribeEpisodeHandler", () => {
     });
 
     // 5. Run
-    await transcribeEpisodeHandler({ episodeId: "ep_1" });
+    await transcribeEpisodeHandler(createMockJob({ episodeId: "ep_1" }));
 
     // 6. Assert
     expect(groq.transcribeAudio).toHaveBeenCalledWith(
@@ -232,7 +232,7 @@ describe("transcribeEpisodeHandler", () => {
     });
 
     // 6. Run
-    await transcribeEpisodeHandler({ episodeId: "ep_1" });
+    await transcribeEpisodeHandler(createMockJob({ episodeId: "ep_1" }));
 
     // 7. Assert
     expect(storage.uploadFileToStorage).toHaveBeenCalled();
