@@ -1,6 +1,7 @@
 import { podcastImportHandler, type PodcastImportPayload } from './podcastImport';
 import { transcribeEpisodeHandler, type TranscribeEpisodePayload } from './transcribeEpisode';
 import { summarizeEpisodeHandler, type SummarizeEpisodePayload } from './summarizeEpisode';
+import { extractEntitiesHandler, type ExtractEntitiesPayload } from './extractEntities';
 
 // Define the Registry Mapping
 export const jobRegistry = {
@@ -16,6 +17,10 @@ export const jobRegistry = {
     handler: summarizeEpisodeHandler,
     concurrency: 3,
   },
+  'extract_entities': {
+      handler: extractEntitiesHandler,
+      concurrency: 5, // Lightweight job compared to audio processing
+  }
 } as const;
 
 // Helper type to derive payload type from job type key

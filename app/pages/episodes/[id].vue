@@ -78,6 +78,47 @@
         <UCard>
           <template #header>
             <div class="flex items-center justify-between">
+              <h3 class="font-semibold">Entities</h3>
+               <UButton
+                  v-if="!entitiesData?.data?.length"
+                  :loading="extracting"
+                  :disabled="!transcriptData?.data"
+                  @click="triggerExtraction"
+                  size="xs"
+                  color="primary"
+                  variant="soft"
+                >
+                  Extract Entities
+                </UButton>
+            </div>
+          </template>
+
+          <div v-if="entitiesPending" class="py-8 flex justify-center">
+             <UIcon name="i-heroicons-arrow-path" class="animate-spin w-6 h-6 text-gray-400" />
+          </div>
+
+          <div v-else-if="entitiesData?.data?.length" class="flex flex-wrap gap-2">
+             <UButton
+                v-for="entity in entitiesData.data"
+                :key="entity.id"
+                :to="`/entities/${entity.id}`"
+                size="xs"
+                color="gray"
+                variant="solid"
+             >
+                {{ entity.name }}
+             </UButton>
+          </div>
+
+           <div v-else class="text-gray-500 italic text-center py-8">
+            <span v-if="!transcriptData?.data">Generate a transcript first to enable entity extraction.</span>
+            <span v-else>No entities extracted. Click 'Extract Entities' to start.</span>
+          </div>
+        </UCard>
+
+        <UCard>
+          <template #header>
+            <div class="flex items-center justify-between">
               <h3 class="font-semibold">Transcript</h3>
               <div class="flex gap-2">
                  <span v-if="transcriptData?.data?.language" class="text-xs font-mono px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">
@@ -138,8 +179,16 @@ const { data: summaryData, pending: summaryPending, refresh: refreshSummary } = 
     lazy: true,
 })
 
+// Fetch entities separately
+const { data: entitiesData, pending: entitiesPending, refresh: refreshEntities } = await useFetch(`/api/episodes/${id}/entities`, {
+    key: `entities-${id}`,
+    server: false,
+    lazy: true,
+})
+
 const transcribing = ref(false)
 const summarizing = ref(false)
+const extracting = ref(false)
 
 async function triggerTranscription() {
     transcribing.value = true
@@ -187,8 +236,32 @@ async function triggerSummary() {
     }
 }
 
+async function triggerExtraction() {
+    extracting.value = true
+    try {
+        await $fetch(`/api/episodes/${id}/extract-entities`, {
+            method: 'POST'
+        })
+        toast.add({
+            title: 'Extraction queued',
+            description: 'Entity extraction started in background.',
+            color: 'green'
+        })
+        startPollingEntities()
+    } catch (e: any) {
+        toast.add({
+            title: 'Error',
+            description: e.message || 'Failed to start extraction',
+            color: 'red'
+        })
+    } finally {
+        extracting.value = false
+    }
+}
+
 let pollInterval: NodeJS.Timeout | null = null
 let summaryPollInterval: NodeJS.Timeout | null = null
+let entitiesPollInterval: NodeJS.Timeout | null = null
 
 function startPolling() {
     if (pollInterval) clearInterval(pollInterval)
@@ -214,9 +287,22 @@ function startPollingSummary() {
     }, 3000)
 }
 
+function startPollingEntities() {
+    if (entitiesPollInterval) clearInterval(entitiesPollInterval)
+    let attempts = 0
+    entitiesPollInterval = setInterval(async () => {
+        attempts++
+        await refreshEntities()
+        if (entitiesData.value?.data?.length > 0 || attempts > 20) {
+            if (entitiesPollInterval) clearInterval(entitiesPollInterval)
+        }
+    }, 3000)
+}
+
 onUnmounted(() => {
     if (pollInterval) clearInterval(pollInterval)
     if (summaryPollInterval) clearInterval(summaryPollInterval)
+    if (entitiesPollInterval) clearInterval(entitiesPollInterval)
 })
 
 function formatDuration(seconds: number) {
