@@ -1,7 +1,8 @@
 import { podcasts, episodes } from '../../../database/schema'
 import { eq, like, and, count, desc } from 'drizzle-orm'
+import { CACHE_GROUP, CACHE_NAMES } from '../../../utils/cache'
 
-export default defineEventHandler(async (event) => {
+export default defineCachedEventHandler(async (event) => {
   const podcastId = getRouterParam(event, 'id')
 
   if (!podcastId) {
@@ -52,4 +53,9 @@ export default defineEventHandler(async (event) => {
     .orderBy(desc(episodes.publishedAt))
 
   return createPaginatedResponse(data, total, pagination)
+}, {
+  group: CACHE_GROUP,
+  name: CACHE_NAMES.PODCAST_EPISODES,
+  maxAge: 3600,
+  swr: true
 })

@@ -1,8 +1,9 @@
-import { defineEventHandler, getQuery, createError } from 'h3'
+import { getQuery, createError } from 'h3'
 import { searchPodcasts as searchItunes } from '../utils/itunes'
 import { findPodcastsByTermOrFeedUrls } from '../utils/podcastService'
+import { CACHE_GROUP, CACHE_NAMES } from '../utils/cache'
 
-export default defineEventHandler(async (event) => {
+export default defineCachedEventHandler(async (event) => {
   const query = getQuery(event)
   const term = query.term as string
 
@@ -77,4 +78,8 @@ export default defineEventHandler(async (event) => {
       statusMessage: 'Failed to search podcasts'
     })
   }
+}, {
+  group: CACHE_GROUP,
+  name: CACHE_NAMES.SEARCH,
+  maxAge: 3600
 })
