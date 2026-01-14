@@ -1,6 +1,11 @@
 # Stage 1: Build
 FROM node:22-alpine AS builder
 
+ARG R2_ACCOUNT_ID
+ARG R2_ACCESS_KEY_ID
+ARG R2_SECRET_ACCESS_KEY
+ARG R2_BUCKET_NAME
+ 
 WORKDIR /app
 
 # Copy package files
