@@ -88,6 +88,6 @@ export default defineCachedEventHandler(
   {
     group: CACHE_GROUP,
     name: CACHE_NAMES.SEARCH,
-    maxAge: 3600,
+    maxAge: 30,
   },
 );

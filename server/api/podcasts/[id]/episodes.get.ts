@@ -58,7 +58,7 @@ export default defineCachedEventHandler(
   {
     group: CACHE_GROUP,
     name: CACHE_NAMES.PODCAST_EPISODES,
-    maxAge: 3600,
+    maxAge: 30,
     swr: true,
   },
 );
