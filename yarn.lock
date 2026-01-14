@@ -3840,7 +3840,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/markdown-it@npm:^14.0.0, @types/markdown-it@npm:^14.1.2":
+"@types/markdown-it-footnote@npm:^3.0.4":
+  version: 3.0.4
+  resolution: "@types/markdown-it-footnote@npm:3.0.4"
+  dependencies:
+    "@types/markdown-it": "npm:*"
+  checksum: 10c0/7e7d0f339cc868c4d94299efc4c60a432ac216b92270298a1e61cd0c77e80221df60ab461dce3b44f3fead01891a4ab1cd4bc61f37d7cb59044205631ee35de1
+  languageName: node
+  linkType: hard
+
+"@types/markdown-it@npm:*, @types/markdown-it@npm:^14.0.0, @types/markdown-it@npm:^14.1.2":
   version: 14.1.2
   resolution: "@types/markdown-it@npm:14.1.2"
   dependencies:
@@ -4679,6 +4688,13 @@ __metadata:
   bin:
     autoprefixer: bin/autoprefixer
   checksum: 10c0/3765c5d0fa3e95fb2ebe9d5a6d4da0156f5d346c7ec9ac0fbf5c97c8139d0ca1e8743bf5dc1b4aa954467be6929fddf8498a3b6202d468d70b5f359f3b6af90f
+  languageName: node
+  linkType: hard
+
+"aws4fetch@npm:^1.0.20":
+  version: 1.0.20
+  resolution: "aws4fetch@npm:1.0.20"
+  checksum: 10c0/a4eac7bd0d1c3e611c17ed1ef41ac0b48c0a8e74a985ad968c071e74d94586d3572edc943b43fa5ca756c686ea73baa2f48e264d657bb8c2e95c8e0037d48a87
   languageName: node
   linkType: hard
 
@@ -7608,6 +7624,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"markdown-it-footnote@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "markdown-it-footnote@npm:4.0.0"
+  checksum: 10c0/47aa807b143af211d7eca376c724b05e939e8b5960f6e287c63eca7f121be7ac697ff5601d5b7c89cbde7a32713a66b2a6f375251fad1fe989bd05d07f80e4cd
+  languageName: node
+  linkType: hard
+
 "markdown-it@npm:^14.0.0, markdown-it@npm:^14.1.0":
   version: 14.1.0
   resolution: "markdown-it@npm:14.1.0"
@@ -8731,14 +8754,17 @@ __metadata:
     "@nuxt/ui": "npm:^4.3.0"
     "@tailwindcss/typography": "npm:^0.5.19"
     "@types/markdown-it": "npm:^14.1.2"
+    "@types/markdown-it-footnote": "npm:^3.0.4"
     "@unhead/vue": "npm:^2.1.1"
     "@vue/test-utils": "npm:^2.4.6"
     ai: "npm:^6.0.33"
+    aws4fetch: "npm:^1.0.20"
     dotenv: "npm:^17.2.3"
     drizzle-kit: "npm:^0.31.8"
     drizzle-orm: "npm:^0.45.1"
     happy-dom: "npm:^20.1.0"
     markdown-it: "npm:^14.1.0"
+    markdown-it-footnote: "npm:^4.0.0"
     nuxt: "npm:^4.2.2"
     ofetch: "npm:^1.5.1"
     rss-parser: "npm:^3.13.0"
