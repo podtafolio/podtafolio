@@ -7,16 +7,14 @@
 ## Features
 
 ### Current Features
-
 - **Hybrid Search**: Unified search across local database and iTunes API, ensuring immediate results with local data precedence.
 - **Podcast Management**:
-  - **Import**: Asynchronous background processing for importing large podcast feeds.
-  - **Sync**: Automated hourly synchronization to keep feeds up-to-date.
+    - **Import**: Asynchronous background processing for importing large podcast feeds.
+    - **Sync**: Automated hourly synchronization to keep feeds up-to-date.
 - **AI Transcriptions**: High-fidelity episode transcriptions powered by the **Groq API** (using `whisper-large-v3`).
 - **Discovery**: Filter and browse podcasts and episodes.
 
 ### Roadmap
-
 - **Summaries**: AI-generated summaries for quick episode overviews.
 - **Deep Analysis**: Sentiment analysis, topic extraction, and entity recognition.
 - **Semantic Search**: AI-powered search to find specific quotes or concepts within episodes.
@@ -38,10 +36,10 @@ Podtafolio uses a modern, robust architecture designed for performance and scala
 - **Backend**: Nuxt Server (Nitro)
 - **Database**: Drizzle ORM, LibSQL/Turso
 - **Dependencies**:
-  - `rss-parser`: Robust RSS feed parsing.
-  - `zod`: Runtime schema validation.
-  - `ofetch`: HTTP client.
-  - `@nuxt/image`: Optimized image handling.
+    - `rss-parser`: Robust RSS feed parsing.
+    - `zod`: Runtime schema validation.
+    - `ofetch`: HTTP client.
+    - `@nuxt/image`: Optimized image handling.
 
 ## Configuration
 
@@ -79,13 +77,11 @@ bun install
 This project uses Drizzle ORM.
 
 **Generate Migrations:**
-
 ```bash
 npm run db:generate
 ```
 
 **Apply Migrations:**
-
 ```bash
 npm run db:migrate
 ```
@@ -149,11 +145,11 @@ bun run build
 - `app/`: Contains the main application source code (pages, components, layouts, `app.vue`).
 - `public/`: Static assets that are served directly.
 - `server/`: Server-side logic.
-  - `api/`: API route handlers.
-  - `database/`: Schema definitions and migrations.
-  - `jobs/`: Background job definitions (imports, transcriptions).
-  - `tasks/`: Scheduled Nitro tasks (e.g., sync).
-  - `utils/`: Shared utilities.
+    - `api/`: API route handlers.
+    - `database/`: Schema definitions and migrations.
+    - `jobs/`: Background job definitions (imports, transcriptions).
+    - `tasks/`: Scheduled Nitro tasks (e.g., sync).
+    - `utils/`: Shared utilities.
 - `tests/`: Unit and integration tests.
 
 For more information, check out the [Nuxt documentation](https://nuxt.com/docs).

@@ -1,8 +1,8 @@
-import { eq, sql, like, or, inArray } from "drizzle-orm";
-import { podcasts, episodes } from "../database/schema";
-import { db } from "../utils/db";
-import { parsePodcastFeed } from "./feedParser";
-import { invalidatePodcastCache } from "./cache";
+import { eq, sql, like, or, inArray } from 'drizzle-orm';
+import { podcasts, episodes } from '../database/schema';
+import { db } from '../utils/db';
+import { parsePodcastFeed } from './feedParser';
+import { invalidatePodcastCache } from './cache';
 
 /**
  * Imports a podcast from a feed URL into the database.
@@ -17,22 +17,19 @@ export async function importPodcast(feedUrl: string, podcastId: string) {
   try {
     // 1. Parse the feed
     const feedData = await parsePodcastFeed(feedUrl);
-    console.log(
-      `[Import] Feed parsed successfully: ${feedData.title} with ${feedData.episodes.length} episodes`,
-    );
+    console.log(`[Import] Feed parsed successfully: ${feedData.title} with ${feedData.episodes.length} episodes`);
 
     // 2. Update podcast metadata and insert episodes in a transaction
     await db.transaction(async (tx) => {
       // Update podcast details
-      await tx
-        .update(podcasts)
+      await tx.update(podcasts)
         .set({
           title: feedData.title,
           description: feedData.description,
           imageUrl: feedData.imageUrl,
           author: feedData.author,
           websiteUrl: feedData.websiteUrl,
-          status: "ready",
+          status: 'ready',
           lastScrapedAt: new Date(),
           updatedAt: new Date(),
           importError: null, // Clear any previous error
@@ -48,7 +45,7 @@ export async function importPodcast(feedUrl: string, podcastId: string) {
 
       if (feedData.episodes.length > 0) {
         // Prepare episode values
-        const episodeValues = feedData.episodes.map((ep) => ({
+        const episodeValues = feedData.episodes.map(ep => ({
           podcastId: podcastId,
           title: ep.title,
           description: ep.description,
@@ -68,22 +65,20 @@ export async function importPodcast(feedUrl: string, podcastId: string) {
 
         const chunkSize = 50;
         for (let i = 0; i < episodeValues.length; i += chunkSize) {
-          const chunk = episodeValues.slice(i, i + chunkSize);
-          await tx
-            .insert(episodes)
-            .values(chunk)
-            .onConflictDoUpdate({
-              target: [episodes.podcastId, episodes.guid],
-              set: {
-                title: sql`excluded.title`,
-                description: sql`excluded.description`,
-                audioUrl: sql`excluded.audio_url`,
-                imageUrl: sql`excluded.image_url`,
-                duration: sql`excluded.duration`,
-                publishedAt: sql`excluded.published_at`,
-                updatedAt: new Date(),
-              },
-            });
+            const chunk = episodeValues.slice(i, i + chunkSize);
+            await tx.insert(episodes).values(chunk)
+                .onConflictDoUpdate({
+                    target: [episodes.podcastId, episodes.guid],
+                    set: {
+                        title: sql`excluded.title`,
+                        description: sql`excluded.description`,
+                        audioUrl: sql`excluded.audio_url`,
+                        imageUrl: sql`excluded.image_url`,
+                        duration: sql`excluded.duration`,
+                        publishedAt: sql`excluded.published_at`,
+                        updatedAt: new Date(),
+                    }
+                });
         }
       }
     });
@@ -92,27 +87,24 @@ export async function importPodcast(feedUrl: string, podcastId: string) {
     await invalidatePodcastCache(podcastId);
 
     console.log(`[Import] Successfully imported podcast ${podcastId}`);
+
   } catch (error: any) {
     console.error(`[Import] Failed to import podcast ${podcastId}:`, error);
 
     // Update status to error
     try {
-      await db
-        .update(podcasts)
-        .set({
-          status: "error",
-          importError: error.message || "Unknown error",
-          updatedAt: new Date(),
-        })
-        .where(eq(podcasts.id, podcastId));
+        await db.update(podcasts)
+            .set({
+                status: 'error',
+                importError: error.message || 'Unknown error',
+                updatedAt: new Date(),
+            })
+            .where(eq(podcasts.id, podcastId));
 
-      // Invalidate cache
-      await invalidatePodcastCache(podcastId);
+        // Invalidate cache
+        await invalidatePodcastCache(podcastId);
     } catch (dbError) {
-      console.error(
-        `[Import] Failed to save error status for ${podcastId}:`,
-        dbError,
-      );
+        console.error(`[Import] Failed to save error status for ${podcastId}:`, dbError);
     }
   }
 }
@@ -123,14 +115,11 @@ export async function importPodcast(feedUrl: string, podcastId: string) {
  * @param term Search term for title or author
  * @param feedUrls List of feed URLs to check for existence
  */
-export async function findPodcastsByTermOrFeedUrls(
-  term: string,
-  feedUrls: string[],
-) {
+export async function findPodcastsByTermOrFeedUrls(term: string, feedUrls: string[]) {
   const searchCondition = or(
     // SQLite LIKE is case-insensitive by default
     like(podcasts.title, `%${term}%`),
-    like(podcasts.author, `%${term}%`),
+    like(podcasts.author, `%${term}%`)
   );
 
   let finalCondition;

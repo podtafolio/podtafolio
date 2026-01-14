@@ -1,21 +1,18 @@
-import { db } from "./db";
-import { jobs } from "../database/schema";
-import { eq, lt, gt, and, sql, inArray } from "drizzle-orm";
-import type { JobType, JobPayload } from "../jobs";
+import { db } from './db';
+import { jobs } from '../database/schema';
+import { eq, lt, gt, and, sql, inArray } from 'drizzle-orm';
+import type { JobType, JobPayload } from '../jobs';
 
 export const STUCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Enqueues a new job into the database.
  */
-export async function enqueueJob<T extends JobType>(
-  type: T,
-  payload: JobPayload<T>,
-) {
+export async function enqueueJob<T extends JobType>(type: T, payload: JobPayload<T>) {
   await db.insert(jobs).values({
     type,
     payload: payload,
-    status: "pending",
+    status: 'pending',
   });
 }
 
@@ -36,7 +33,10 @@ export async function getJobCounts(): Promise<Record<string, number>> {
     })
     .from(jobs)
     .where(
-      and(eq(jobs.status, "processing"), gt(jobs.startedAt, stuckThreshold)),
+      and(
+        eq(jobs.status, 'processing'),
+        gt(jobs.startedAt, stuckThreshold)
+      )
     )
     .groupBy(jobs.type);
 
@@ -72,33 +72,32 @@ export async function claimNextJob(allowedTypes?: string[]) {
     // We order by created_at to process FIFO.
 
     const candidate = await tx.query.jobs.findFirst({
-      where: (table, { or, and, eq, lt, inArray }) => {
-        const conditions = [
-          or(
-            eq(table.status, "pending"),
-            and(
-              eq(table.status, "processing"),
-              lt(table.startedAt, stuckThreshold),
-            ),
-          ),
-        ];
+        where: (table, { or, and, eq, lt, inArray }) => {
+          const conditions = [
+             or(
+                eq(table.status, 'pending'),
+                and(
+                    eq(table.status, 'processing'),
+                    lt(table.startedAt, stuckThreshold)
+                )
+            )
+          ];
 
-        if (allowedTypes) {
-          conditions.push(inArray(table.type, allowedTypes));
-        }
+          if (allowedTypes) {
+            conditions.push(inArray(table.type, allowedTypes));
+          }
 
-        return and(...conditions);
-      },
-      orderBy: (jobs, { asc }) => [asc(jobs.createdAt)],
+          return and(...conditions);
+        },
+        orderBy: (jobs, { asc }) => [asc(jobs.createdAt)],
     });
 
     if (!candidate) return null;
 
     // 2. Mark it as processing
-    await tx
-      .update(jobs)
+    await tx.update(jobs)
       .set({
-        status: "processing",
+        status: 'processing',
         startedAt: new Date(),
         // If it was a retry/stuck job, we might want to increment retries?
         // For now let's just claim it.
@@ -113,10 +112,9 @@ export async function claimNextJob(allowedTypes?: string[]) {
  * Marks a job as completed.
  */
 export async function completeJob(jobId: string) {
-  await db
-    .update(jobs)
+  await db.update(jobs)
     .set({
-      status: "completed",
+      status: 'completed',
       completedAt: new Date(),
     })
     .where(eq(jobs.id, jobId));
@@ -132,17 +130,16 @@ export async function failJob(jobId: string, error: Error) {
   // Fetch current retries
   const job = await db.query.jobs.findFirst({
     where: eq(jobs.id, jobId),
-    columns: { retries: true },
+    columns: { retries: true }
   });
 
   if (!job) return; // Should not happen
 
   if (job.retries < MAX_RETRIES) {
     // Retry: Set back to pending, increment retries
-    await db
-      .update(jobs)
+    await db.update(jobs)
       .set({
-        status: "pending",
+        status: 'pending',
         retries: job.retries + 1,
         error: error.message,
         startedAt: null, // Reset so it can be picked up again
@@ -150,10 +147,9 @@ export async function failJob(jobId: string, error: Error) {
       .where(eq(jobs.id, jobId));
   } else {
     // Fail permanently
-    await db
-      .update(jobs)
+    await db.update(jobs)
       .set({
-        status: "failed",
+        status: 'failed',
         error: error.message,
         completedAt: new Date(), // It's done, albeit failed
       })

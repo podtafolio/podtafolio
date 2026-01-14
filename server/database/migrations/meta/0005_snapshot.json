@@ -88,17 +88,25 @@
       "indexes": {
         "unique_episode": {
           "name": "unique_episode",
-          "columns": ["podcast_id", "guid"],
+          "columns": [
+            "podcast_id",
+            "guid"
+          ],
           "isUnique": true
         },
         "published_at_idx": {
           "name": "published_at_idx",
-          "columns": ["published_at"],
+          "columns": [
+            "published_at"
+          ],
           "isUnique": false
         },
         "podcast_id_published_at_idx": {
           "name": "podcast_id_published_at_idx",
-          "columns": ["podcast_id", "published_at"],
+          "columns": [
+            "podcast_id",
+            "published_at"
+          ],
           "isUnique": false
         }
       },
@@ -107,8 +115,12 @@
           "name": "episodes_podcast_id_podcasts_id_fk",
           "tableFrom": "episodes",
           "tableTo": "podcasts",
-          "columnsFrom": ["podcast_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "podcast_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -189,7 +201,9 @@
       "indexes": {
         "status_idx": {
           "name": "status_idx",
-          "columns": ["status"],
+          "columns": [
+            "status"
+          ],
           "isUnique": false
         }
       },
@@ -290,7 +304,9 @@
       "indexes": {
         "podcasts_feed_url_unique": {
           "name": "podcasts_feed_url_unique",
-          "columns": ["feed_url"],
+          "columns": [
+            "feed_url"
+          ],
           "isUnique": true
         }
       },

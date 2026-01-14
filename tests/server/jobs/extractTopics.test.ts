@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { extractTopicsHandler } from "../../../server/jobs/extractTopics";
-import { db } from "../../../server/utils/db";
-import { generateObject } from "ai";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { extractTopicsHandler } from '../../../server/jobs/extractTopics';
+import { db } from '../../../server/utils/db';
+import { generateObject } from 'ai';
 
 // Mock dependencies
-vi.mock("../../../server/utils/db", () => {
+vi.mock('../../../server/utils/db', () => {
   const insertMock = vi.fn(() => ({
     values: vi.fn(() => ({
-      returning: vi.fn().mockResolvedValue([{ id: "mock-topic-id" }]),
+      returning: vi.fn().mockResolvedValue([{ id: 'mock-topic-id' }]),
       onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
     })),
   }));
@@ -15,10 +15,10 @@ vi.mock("../../../server/utils/db", () => {
     db: {
       query: {
         transcripts: {
-          findFirst: vi.fn(),
+            findFirst: vi.fn(),
         },
         topics: {
-          findFirst: vi.fn(),
+            findFirst: vi.fn(),
         },
       },
       insert: insertMock,
@@ -26,34 +26,34 @@ vi.mock("../../../server/utils/db", () => {
   };
 });
 
-vi.mock("../../../server/utils/ai", () => ({
+vi.mock('../../../server/utils/ai', () => ({
   google: vi.fn(),
 }));
 
-vi.mock("ai", () => ({
+vi.mock('ai', () => ({
   generateObject: vi.fn(),
 }));
 
-describe("extractTopicsHandler", () => {
+describe('extractTopicsHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should extract topics and save them", async () => {
+  it('should extract topics and save them', async () => {
     // Mock transcript
     (db.query.transcripts.findFirst as any).mockResolvedValue({
-      content: "This is a transcript about AI and Climate Change.",
+      content: 'This is a transcript about AI and Climate Change.',
       segments: [],
     });
 
     // Mock AI response
     (generateObject as any).mockResolvedValue({
       object: {
-        topics: ["AI", "Climate Change"],
+        topics: ['AI', 'Climate Change'],
       },
     });
 
-    await extractTopicsHandler({ episodeId: "ep-1" });
+    await extractTopicsHandler({ episodeId: 'ep-1' });
 
     expect(db.query.transcripts.findFirst).toHaveBeenCalled();
     expect(generateObject).toHaveBeenCalled();
@@ -66,34 +66,34 @@ describe("extractTopicsHandler", () => {
     expect(db.insert).toHaveBeenCalledTimes(4);
   });
 
-  it("should handle existing topics", async () => {
-    // Mock transcript
-    (db.query.transcripts.findFirst as any).mockResolvedValue({
-      content: "This is a transcript about AI.",
-      segments: [],
-    });
+  it('should handle existing topics', async () => {
+     // Mock transcript
+     (db.query.transcripts.findFirst as any).mockResolvedValue({
+        content: 'This is a transcript about AI.',
+        segments: [],
+      });
 
-    // Mock AI response
-    (generateObject as any).mockResolvedValue({
-      object: {
-        topics: ["AI"],
-      },
-    });
+      // Mock AI response
+      (generateObject as any).mockResolvedValue({
+        object: {
+          topics: ['AI'],
+        },
+      });
 
-    // Mock existing topic
-    (db.query.topics.findFirst as any).mockResolvedValue({
-      id: "existing-id",
-      name: "AI",
-    });
+      // Mock existing topic
+      (db.query.topics.findFirst as any).mockResolvedValue({
+          id: 'existing-id',
+          name: 'AI'
+      });
 
-    await extractTopicsHandler({ episodeId: "ep-1" });
+      await extractTopicsHandler({ episodeId: 'ep-1' });
 
-    // Should check if topic exists
-    expect(db.query.topics.findFirst).toHaveBeenCalled();
+      // Should check if topic exists
+      expect(db.query.topics.findFirst).toHaveBeenCalled();
 
-    // Should NOT insert topic, ONLY insert link
-    // But wait, the code calls insert for link.
-    // So 1 insert call (for link).
-    expect(db.insert).toHaveBeenCalledTimes(1);
+      // Should NOT insert topic, ONLY insert link
+      // But wait, the code calls insert for link.
+      // So 1 insert call (for link).
+      expect(db.insert).toHaveBeenCalledTimes(1);
   });
 });

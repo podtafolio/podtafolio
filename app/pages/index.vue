@@ -16,13 +16,7 @@
           class="rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         >
           {{ topic.name }}
-          <UBadge
-            color="gray"
-            variant="soft"
-            size="xs"
-            class="ml-1 rounded-full"
-            >{{ topic.count }}</UBadge
-          >
+          <UBadge color="gray" variant="soft" size="xs" class="ml-1 rounded-full">{{ topic.count }}</UBadge>
         </UButton>
       </div>
     </div>
@@ -34,10 +28,7 @@
     </div>
 
     <div v-if="status === 'pending'" class="py-12 flex justify-center">
-      <UIcon
-        name="i-heroicons-arrow-path"
-        class="animate-spin w-8 h-8 text-gray-400"
-      />
+        <UIcon name="i-heroicons-arrow-path" class="animate-spin w-8 h-8 text-gray-400" />
     </div>
 
     <div v-else-if="status === 'error'" class="text-red-500 py-12 text-center">
@@ -45,9 +36,7 @@
     </div>
 
     <div v-else-if="podcasts?.data.length === 0" class="text-center py-12">
-      <div class="text-gray-500 mb-4">
-        You haven't subscribed to any podcasts yet.
-      </div>
+      <div class="text-gray-500 mb-4">You haven't subscribed to any podcasts yet.</div>
       <UButton to="/search" label="Discover Podcasts" size="lg" />
     </div>
 
@@ -66,37 +55,31 @@
             class="w-16 h-16 rounded-lg object-cover bg-gray-100"
             loading="lazy"
           />
-          <div
-            class="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"
-            v-else
-          >
+           <div class="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400" v-else>
             <UIcon name="i-heroicons-microphone" class="w-8 h-8" />
           </div>
 
           <div class="flex-1 min-w-0">
-            <h3 class="font-bold truncate" :title="podcast.title">
-              {{ podcast.title }}
-            </h3>
+            <h3 class="font-bold truncate" :title="podcast.title">{{ podcast.title }}</h3>
 
             <div class="mt-1">
-              <span
-                v-if="podcast.status === 'importing'"
-                class="inline-flex items-center gap-1 text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full"
-              >
-                <UIcon
-                  name="i-heroicons-arrow-path"
-                  class="animate-spin w-3 h-3"
-                />
-                Importing...
-              </span>
-              <span
-                v-else-if="podcast.status === 'error'"
-                class="inline-flex items-center gap-1 text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded-full"
-              >
-                <UIcon name="i-heroicons-exclamation-circle" class="w-3 h-3" />
-                Error
-              </span>
-              <span v-else class="text-xs text-gray-500"> Ready </span>
+                 <span
+                    v-if="podcast.status === 'importing'"
+                    class="inline-flex items-center gap-1 text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full"
+                >
+                    <UIcon name="i-heroicons-arrow-path" class="animate-spin w-3 h-3" />
+                    Importing...
+                </span>
+                <span
+                    v-else-if="podcast.status === 'error'"
+                    class="inline-flex items-center gap-1 text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded-full"
+                >
+                    <UIcon name="i-heroicons-exclamation-circle" class="w-3 h-3" />
+                    Error
+                </span>
+                 <span v-else class="text-xs text-gray-500">
+                    Ready
+                 </span>
             </div>
           </div>
         </div>
@@ -106,6 +89,6 @@
 </template>
 
 <script setup lang="ts">
-const { data: podcasts, status } = await useFetch("/api/podcasts");
-const { data: topics } = await useFetch("/api/topics/trending");
+const { data: podcasts, status } = await useFetch('/api/podcasts')
+const { data: topics } = await useFetch('/api/topics/trending')
 </script>

@@ -1,10 +1,5 @@
-import {
-  claimNextJob,
-  completeJob,
-  failJob,
-  getJobCounts,
-} from "../utils/queue";
-import { getJobHandler, getJobConcurrency, jobRegistry } from "../jobs";
+import { claimNextJob, completeJob, failJob, getJobCounts } from '../utils/queue';
+import { getJobHandler, getJobConcurrency, jobRegistry } from '../jobs';
 
 export default defineNitroPlugin((nitroApp) => {
   // Nitro plugins run on server start.
@@ -13,7 +8,7 @@ export default defineNitroPlugin((nitroApp) => {
   const POLLING_INTERVAL = 5000; // 5 seconds
   let isLoopRunning = false;
 
-  console.log("[Worker] Initializing background job worker...");
+  console.log('[Worker] Initializing background job worker...');
 
   const processLoop = async () => {
     // Prevent overlapping loops.
@@ -61,13 +56,10 @@ export default defineNitroPlugin((nitroApp) => {
           // We wrap it in a function to handle completion/failure.
           // We intentionally do not await this promise so the loop can continue
           // and claim another job if capacity allows.
-          runJob(job.id, job.type, job.payload, handler).catch((err) => {
+          runJob(job.id, job.type, job.payload, handler).catch(err => {
             // This catch should theoretically not be hit as runJob handles internal errors,
             // but good for safety.
-            console.error(
-              `[Worker] Unexpected error in spawned job ${job.id}:`,
-              err,
-            );
+            console.error(`[Worker] Unexpected error in spawned job ${job.id}:`, err);
           });
         } else {
           console.error(`[Worker] No handler found for job type: ${job.type}`);
@@ -84,8 +76,9 @@ export default defineNitroPlugin((nitroApp) => {
         // No pending jobs found for the allowed types.
         // Wait for the full polling interval.
       }
+
     } catch (err) {
-      console.error("[Worker] Error in processing loop:", err);
+      console.error('[Worker] Error in processing loop:', err);
     }
 
     isLoopRunning = false;
@@ -95,16 +88,9 @@ export default defineNitroPlugin((nitroApp) => {
   /**
    * Helper to run the job handler and manage lifecycle.
    */
-  async function runJob(
-    jobId: string,
-    type: string,
-    payload: any,
-    handler: (p: any) => Promise<void>,
-  ) {
+  async function runJob(jobId: string, type: string, payload: any, handler: (p: any) => Promise<void>) {
     try {
-      console.log(
-        `[Worker] Starting execution of job ${jobId} (type: ${type})`,
-      );
+      console.log(`[Worker] Starting execution of job ${jobId} (type: ${type})`);
       await handler(payload);
       await completeJob(jobId);
       console.log(`[Worker] Job ${jobId} completed successfully`);

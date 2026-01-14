@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod'
 
 const iTunesPodcastSchema = z.object({
   collectionName: z.string(),
@@ -7,38 +7,38 @@ const iTunesPodcastSchema = z.object({
   artworkUrl100: z.string().optional(),
   artistName: z.string().optional(),
   collectionViewUrl: z.string().optional(),
-});
+})
 
 const iTunesSearchResponseSchema = z.object({
   resultCount: z.number(),
-  results: z.array(iTunesPodcastSchema),
-});
+  results: z.array(iTunesPodcastSchema)
+})
 
-export type iTunesPodcast = z.infer<typeof iTunesPodcastSchema>;
+export type iTunesPodcast = z.infer<typeof iTunesPodcastSchema>
 
 export const searchPodcasts = async (term: string) => {
   try {
-    const rawResponse = await $fetch("https://itunes.apple.com/search", {
+    const rawResponse = await $fetch('https://itunes.apple.com/search', {
       params: {
         term,
-        media: "podcast",
-        entity: "podcast",
-      },
-    });
+        media: 'podcast',
+        entity: 'podcast'
+      }
+    })
 
     // Parse JSON if it comes back as a string (itunes sometimes sends text/javascript content type)
     let response = rawResponse;
-    if (typeof rawResponse === "string") {
-      try {
-        response = JSON.parse(rawResponse);
-      } catch (e) {
-        console.error("Failed to parse iTunes response string:", rawResponse);
-        throw e;
-      }
+    if (typeof rawResponse === 'string') {
+        try {
+            response = JSON.parse(rawResponse);
+        } catch (e) {
+            console.error('Failed to parse iTunes response string:', rawResponse);
+            throw e;
+        }
     }
 
     // Validate response with Zod
-    const parsedResponse = iTunesSearchResponseSchema.parse(response);
+    const parsedResponse = iTunesSearchResponseSchema.parse(response)
 
     // Normalize and filter
     return parsedResponse.results
@@ -49,20 +49,17 @@ export const searchPodcasts = async (term: string) => {
         feedUrl: item.feedUrl!, // We filtered above, so this is safe
         imageUrl: item.artworkUrl600 || item.artworkUrl100 || null,
         author: item.artistName || null,
-        websiteUrl: item.collectionViewUrl || null,
-      }));
+        websiteUrl: item.collectionViewUrl || null
+      }))
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error(
-        "iTunes Validation Error:",
-        JSON.stringify(error.errors, null, 2),
-      );
+      console.error('iTunes Validation Error:', JSON.stringify(error.errors, null, 2))
       throw createError({
         statusCode: 502,
-        statusMessage: "Invalid response from iTunes provider",
-      });
+        statusMessage: 'Invalid response from iTunes provider'
+      })
     }
-    console.error("iTunes Search Error:", error);
-    throw error;
+    console.error('iTunes Search Error:', error)
+    throw error
   }
-};
+}

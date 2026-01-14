@@ -1,13 +1,13 @@
-import { transcripts } from "../../../database/schema";
-import { eq } from "drizzle-orm";
+import { transcripts } from '../../../database/schema';
+import { eq } from 'drizzle-orm';
 
 export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, "id");
+  const id = getRouterParam(event, 'id');
 
   if (!id) {
     throw createError({
       statusCode: 400,
-      statusMessage: "Missing episode ID",
+      statusMessage: 'Missing episode ID',
     });
   }
 
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
     // Usually 404 if the resource (transcript) doesn't exist.
     throw createError({
       statusCode: 404,
-      statusMessage: "Transcript not found",
+      statusMessage: 'Transcript not found',
     });
   }
 

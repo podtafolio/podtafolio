@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { summarizeEpisodeHandler } from "../../../server/jobs/summarizeEpisode";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { summarizeEpisodeHandler } from '../../../server/jobs/summarizeEpisode';
 
 const mocks = vi.hoisted(() => {
   return {
@@ -20,19 +20,19 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("ai", () => ({
+vi.mock('ai', () => ({
   generateText: mocks.generateText,
 }));
 
-vi.mock("../../../server/utils/ai", () => ({
+vi.mock('../../../server/utils/ai', () => ({
   google: mocks.google,
 }));
 
-vi.mock("../../../server/utils/db", () => ({
+vi.mock('../../../server/utils/db', () => ({
   db: mocks.db,
 }));
 
-describe("summarizeEpisodeHandler", () => {
+describe('summarizeEpisodeHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -45,26 +45,26 @@ describe("summarizeEpisodeHandler", () => {
     mocks.db.insert.mockReturnValue({ values: insertValuesMock });
   });
 
-  it("should include language in the prompt", async () => {
-    const episodeId = "ep_123";
+  it('should include language in the prompt', async () => {
+    const episodeId = 'ep_123';
     const transcriptMock = {
-      content: "Hello world",
+      content: 'Hello world',
       segments: [],
-      language: "Spanish",
+      language: 'Spanish',
     };
     const episodeMock = {
-      title: "My Podcast Episode",
+      title: 'My Podcast Episode',
     };
 
     mocks.db.query.transcripts.findFirst.mockResolvedValue(transcriptMock);
     mocks.db.query.episodes.findFirst.mockResolvedValue(episodeMock);
-    mocks.generateText.mockResolvedValue({ text: "Summary content" });
+    mocks.generateText.mockResolvedValue({ text: 'Summary content' });
 
     await summarizeEpisodeHandler({ episodeId });
 
     expect(mocks.generateText).toHaveBeenCalled();
     const callArgs = mocks.generateText.mock.calls[0][0];
-    expect(callArgs.prompt).toContain("My Podcast Episode");
-    expect(callArgs.prompt).toContain("Spanish");
+    expect(callArgs.prompt).toContain('My Podcast Episode');
+    expect(callArgs.prompt).toContain('Spanish');
   });
 });
