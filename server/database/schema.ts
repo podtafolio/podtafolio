@@ -38,7 +38,6 @@ export const transcripts = sqliteTable('transcripts', {
   id: text('id').primaryKey().$defaultFn(() => ulid()),
   episodeId: text('episode_id').references(() => episodes.id).notNull(),
   content: text('content').notNull(),
-  audioHash: text('audio_hash'),
   segments: text('segments', { mode: 'json' }), // JSON array of segments with timestamps
   language: text('language').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),

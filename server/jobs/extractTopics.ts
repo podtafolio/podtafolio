@@ -45,6 +45,8 @@ export async function extractTopicsHandler(payload: ExtractTopicsPayload) {
     - Generic terms like "Podcast", "Interview", "Introduction".
     - Too granular details that wouldn't likely appear in other episodes.
 
+    IMPORTANT: Generate the topics in the following language: ${transcript.language}.
+
     Return a list of topics (max 5-8 topics).
   `;
 
