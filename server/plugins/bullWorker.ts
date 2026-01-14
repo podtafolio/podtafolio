@@ -18,7 +18,7 @@ export default defineNitroPlugin((nitroApp) => {
       type,
       async (job) => {
         console.log(`[Worker] Starting job ${job.id} (${job.name})`);
-        await handler(job.data);
+        await handler(job);
       },
       {
         connection: redisOptions,
