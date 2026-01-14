@@ -7,12 +7,12 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const search = query.search as string | undefined
 
-  const conditions = [eq(podcasts.status, 'ready')]
+  const conditions = []
   if (search) {
     conditions.push(like(podcasts.title, `%${search}%`))
   }
 
-  const whereClause = and(...conditions)
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
   // Count total
   const [{ value: total }] = await db
