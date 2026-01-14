@@ -157,8 +157,13 @@
 
 <script setup lang="ts">
 import MarkdownIt from 'markdown-it'
+import markdownitFootnote from 'markdown-it-footnote'
 
-const md = new MarkdownIt()
+const md = new MarkdownIt({
+  breaks: true,
+  linkify: true,
+  typographer: true
+}).use(markdownitFootnote)
 const route = useRoute()
 const id = route.params.id as string
 const toast = useToast()
