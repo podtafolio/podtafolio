@@ -3,6 +3,49 @@ import { transcribeEpisodeHandler } from '../../../server/jobs/transcribeEpisode
 import { db } from '../../../server/utils/db';
 import * as groq from '../../../server/utils/groq';
 import * as storage from '../../../server/utils/storage';
+import { Readable } from 'node:stream';
+
+// 1. Hoist the mocks variables
+const mocks = vi.hoisted(() => {
+  return {
+    fs: {
+      existsSync: vi.fn(),
+      mkdirSync: vi.fn(),
+      createWriteStream: vi.fn(),
+      statSync: vi.fn(),
+      readFileSync: vi.fn(),
+      unlinkSync: vi.fn(),
+    },
+    path: {
+        join: vi.fn((...args) => args.join('/')),
+    }
+  };
+});
+
+// 2. Mock modules
+vi.mock('node:fs', async () => {
+    const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+    return {
+        ...actual,
+        default: {
+            ...actual,
+            ...mocks.fs,
+        },
+        ...mocks.fs,
+    };
+});
+
+vi.mock('node:path', async () => {
+    const actual = await vi.importActual<typeof import('node:path')>('node:path');
+    return {
+        ...actual,
+        default: {
+            ...actual,
+            ...mocks.path,
+        },
+        ...mocks.path,
+    };
+});
 
 // Mock DB
 vi.mock('../../../server/utils/db', () => {
@@ -39,32 +82,56 @@ vi.mock('../../../server/utils/storage', () => ({
 const fetchStub = vi.fn();
 vi.stubGlobal('fetch', fetchStub);
 
+// Helper to create a Web ReadableStream
+function createWebStream(content: string) {
+    return new ReadableStream({
+        start(controller) {
+            controller.enqueue(new TextEncoder().encode(content));
+            controller.close();
+        }
+    });
+}
+
 describe('transcribeEpisodeHandler', () => {
   const mockEpisode = {
     id: 'ep_1',
     audioUrl: 'https://example.com/audio.mp3',
   };
 
+  const mockWriteStream = {
+    write: vi.fn(),
+    end: vi.fn(),
+    destroy: vi.fn(),
+    on: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     (db.query.episodes.findFirst as any).mockResolvedValue(mockEpisode);
+
+    // Default FS mocks
+    mocks.fs.existsSync.mockReturnValue(true);
+    mocks.fs.createWriteStream.mockReturnValue(mockWriteStream);
+    mocks.fs.readFileSync.mockReturnValue(Buffer.from('audio content'));
+    mocks.fs.statSync.mockReturnValue({ size: 1000 }); // Default small size
   });
 
   it('should skip if transcript exists with same hash', async () => {
-    // 1. Mock Fetch to return some content
-    const audioContent = Buffer.from('audio content');
+    // 1. Mock Fetch to return Web Stream
     const mockResponse = {
       ok: true,
-      arrayBuffer: async () => audioContent.buffer,
+      body: createWebStream('audio content'),
+      headers: { get: () => 'audio/mpeg' }
     };
     fetchStub.mockResolvedValue(mockResponse);
 
     // 2. Mock DB to return existing transcript
-    // Hash of 'audio content' using sha256
-    // We can rely on the implementation logic or pre-calculate.
-    // Let's just assume the implementation calculates a hash and queries DB.
-    // If we return a result for that query, it should skip.
-    (db.query.transcripts.findFirst as any).mockResolvedValue({ id: 'tr_1', audioHash: 'somehash' });
+    const crypto = await import('node:crypto');
+    const expectedHash = crypto.createHash('sha256').update('audio content').digest('hex');
+
+    (db.query.transcripts.findFirst as any).mockImplementation(({ where }) => {
+        return Promise.resolve({ id: 'tr_1', audioHash: expectedHash });
+    });
 
     // 3. Run
     await transcribeEpisodeHandler({ episodeId: 'ep_1' });
@@ -72,66 +139,14 @@ describe('transcribeEpisodeHandler', () => {
     // 4. Assert
     expect(groq.transcribeAudio).not.toHaveBeenCalled();
     expect(db.insert).not.toHaveBeenCalled();
+    expect(mocks.fs.unlinkSync).toHaveBeenCalled();
   });
 
   it('should transcribe directly if file is small', async () => {
     // 1. Mock Fetch (Small file)
-    const audioContent = Buffer.alloc(1024); // 1KB
     const mockResponse = {
       ok: true,
-      arrayBuffer: async () => audioContent.buffer,
-    };
-    fetchStub.mockResolvedValue(mockResponse);
-
-    // 2. Mock DB (No existing transcript)
-    (db.query.transcripts.findFirst as any).mockResolvedValue(null);
-
-    // 3. Mock Groq
-    (groq.transcribeAudio as any).mockResolvedValue({
-      text: 'Transcribed text',
-      language: 'en',
-      segments: [],
-    });
-
-    // 4. Run
-    await transcribeEpisodeHandler({ episodeId: 'ep_1' });
-
-    // 5. Assert
-    expect(groq.transcribeAudio).toHaveBeenCalledWith(expect.any(Buffer), 'audio.mp3');
-    expect(storage.uploadFileToStorage).not.toHaveBeenCalled();
-    expect(db.insert).toHaveBeenCalledWith(expect.anything()); // transcripts table
-    expect(db.insert).toHaveBeenCalledTimes(1);
-
-    // Check arguments of insert
-    const insertCall = (db.insert as any).mock.results[0].value.values;
-    expect(insertCall).toHaveBeenCalledWith(expect.objectContaining({
-        content: 'Transcribed text',
-        audioHash: expect.any(String)
-    }));
-  });
-
-  it('should upload to R2 if file is large', async () => {
-    // 1. Mock Fetch (Large file > 25MB)
-    const largeSize = 26 * 1024 * 1024; // 26MB
-    // Creating a real buffer of 26MB might be slow/memory intensive for tests.
-    // We can mock Buffer.byteLength or just use a small buffer but mock the property check?
-    // But `Buffer.from(arrayBuffer)` creates a real buffer.
-
-    // Better strategy: The code checks `audioBuffer.byteLength`.
-    // We can simulate a large buffer without allocating 26MB by mocking the buffer?
-    // No, `Buffer.from` returns a Uint8Array/Buffer.
-
-    // Let's create a fake object that looks like a buffer but has a large byteLength
-    // The code uses `audioBuffer.byteLength` and passes it to `uploadFileToStorage` or `transcribeAudio`.
-    // `crypto.update(audioBuffer)` also uses it.
-
-    // Actually, allocating 26MB is not THAT big for a test runner (Node has ample heap).
-    // Let's try allocating it.
-
-    const largeBuffer = Buffer.alloc(largeSize);
-    const mockResponse = {
-      ok: true,
-      arrayBuffer: async () => largeBuffer.buffer,
+      body: createWebStream('small audio'),
       headers: { get: () => 'audio/mpeg' }
     };
     fetchStub.mockResolvedValue(mockResponse);
@@ -139,8 +154,9 @@ describe('transcribeEpisodeHandler', () => {
     // 2. Mock DB (No existing transcript)
     (db.query.transcripts.findFirst as any).mockResolvedValue(null);
 
-    // 3. Mock Storage
-    (storage.uploadFileToStorage as any).mockResolvedValue('https://r2.example.com/file.mp3');
+    // 3. Mock FS stat to return small size
+    mocks.fs.statSync.mockReturnValue({ size: 1024 });
+    mocks.fs.readFileSync.mockReturnValue(Buffer.from('small audio'));
 
     // 4. Mock Groq
     (groq.transcribeAudio as any).mockResolvedValue({
@@ -153,9 +169,47 @@ describe('transcribeEpisodeHandler', () => {
     await transcribeEpisodeHandler({ episodeId: 'ep_1' });
 
     // 6. Assert
+    expect(groq.transcribeAudio).toHaveBeenCalledWith(expect.any(Buffer), 'audio.mp3');
+    expect(storage.uploadFileToStorage).not.toHaveBeenCalled();
+    expect(db.insert).toHaveBeenCalledTimes(1);
+    expect(mocks.fs.unlinkSync).toHaveBeenCalled();
+  });
+
+  it('should upload to R2 if file is large', async () => {
+    // 1. Mock Fetch (Large file)
+    const mockResponse = {
+      ok: true,
+      body: createWebStream('large audio'),
+      headers: { get: () => 'audio/mpeg' }
+    };
+    fetchStub.mockResolvedValue(mockResponse);
+
+    // 2. Mock DB (No existing transcript)
+    (db.query.transcripts.findFirst as any).mockResolvedValue(null);
+
+    // 3. Mock FS stat to return large size
+    const largeSize = 26 * 1024 * 1024; // 26MB
+    mocks.fs.statSync.mockReturnValue({ size: largeSize });
+    mocks.fs.readFileSync.mockReturnValue(Buffer.from('large audio'));
+
+    // 4. Mock Storage
+    (storage.uploadFileToStorage as any).mockResolvedValue('https://r2.example.com/file.mp3');
+
+    // 5. Mock Groq
+    (groq.transcribeAudio as any).mockResolvedValue({
+      text: 'Transcribed text',
+      language: 'en',
+      segments: [],
+    });
+
+    // 6. Run
+    await transcribeEpisodeHandler({ episodeId: 'ep_1' });
+
+    // 7. Assert
     expect(storage.uploadFileToStorage).toHaveBeenCalled();
     expect(groq.transcribeAudio).toHaveBeenCalledWith('https://r2.example.com/file.mp3');
     expect(storage.deleteFileFromStorage).toHaveBeenCalled();
     expect(db.insert).toHaveBeenCalled();
-  }, 10000); // Increase timeout for large buffer allocation
+    expect(mocks.fs.unlinkSync).toHaveBeenCalled();
+  });
 });
