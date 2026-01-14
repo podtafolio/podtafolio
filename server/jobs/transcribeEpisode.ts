@@ -35,6 +35,12 @@ export async function transcribeEpisodeHandler(payload: TranscribeEpisodePayload
   const audioArrayBuffer = await audioResponse.arrayBuffer();
   const audioBuffer = Buffer.from(audioArrayBuffer);
 
+  // Check file size limit (25MB for Groq)
+  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
+  if (audioBuffer.byteLength > MAX_FILE_SIZE) {
+    throw new Error(`Audio file size (${(audioBuffer.byteLength / 1024 / 1024).toFixed(2)}MB) exceeds Groq limit of 25MB.`);
+  }
+
   // Determine filename (optional, but helpful for format detection if URL has extension)
   const urlPath = new URL(episode.audioUrl).pathname;
   const filename = urlPath.split('/').pop() || 'audio.mp3';

@@ -9,7 +9,7 @@ export const jobRegistry = {
   },
   'episode_transcription': {
     handler: transcribeEpisodeHandler,
-    concurrency: 2, // Limit concurrent transcriptions to avoid rate limits or heavy load
+    concurrency: 3, // Limit concurrent transcriptions to avoid rate limits or heavy load
   },
 } as const;
 

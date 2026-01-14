@@ -38,7 +38,7 @@ export const transcripts = sqliteTable('transcripts', {
   id: text('id').primaryKey().$defaultFn(() => ulid()),
   episodeId: text('episode_id').references(() => episodes.id).notNull(),
   content: text('content').notNull(),
-  language: text('language').notNull().default('en'),
+  language: text('language').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => ({
