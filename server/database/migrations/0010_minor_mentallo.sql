@@ -1,0 +1,1 @@
+ALTER TABLE `transcripts` ADD `audio_hash` text;

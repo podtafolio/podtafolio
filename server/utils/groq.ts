@@ -1,4 +1,4 @@
-export async function transcribeAudio(audioBuffer: Buffer, filename: string): Promise<{ text: string, language: string, segments: any[] }> {
+export async function transcribeAudio(input: Buffer | string, filename: string = 'audio.mp3'): Promise<{ text: string, language: string, segments: any[] }> {
   const apiKey = process.env.GROQ_API_KEY;
 
   if (!apiKey) {
@@ -6,8 +6,16 @@ export async function transcribeAudio(audioBuffer: Buffer, filename: string): Pr
   }
 
   const formData = new FormData();
-  const blob = new Blob([audioBuffer]);
-  formData.append('file', blob, filename);
+
+  if (typeof input === 'string') {
+    // Input is a URL
+    formData.append('url', input);
+  } else {
+    // Input is a Buffer
+    const blob = new Blob([input]);
+    formData.append('file', blob, filename);
+  }
+
   formData.append('model', 'whisper-large-v3');
   // Use verbose_json to ensure we get the language field and segments
   formData.append('response_format', 'verbose_json');

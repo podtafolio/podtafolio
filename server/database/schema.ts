@@ -40,6 +40,7 @@ export const transcripts = sqliteTable('transcripts', {
   content: text('content').notNull(),
   segments: text('segments', { mode: 'json' }), // JSON array of segments with timestamps
   language: text('language').notNull(),
+  audioHash: text('audio_hash'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => ({
