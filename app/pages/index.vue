@@ -1,5 +1,27 @@
 <template>
   <div>
+    <!-- Trending Topics Section -->
+    <div v-if="topics?.data?.length > 0" class="mb-10">
+      <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+        <UIcon name="i-heroicons-fire" class="text-orange-500" />
+        Trending Topics
+      </h2>
+      <div class="flex flex-wrap gap-3">
+        <UButton
+          v-for="topic in topics.data"
+          :key="topic.id"
+          :to="`/topics/${topic.id}`"
+          variant="outline"
+          color="gray"
+          class="rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        >
+          {{ topic.name }}
+          <UBadge color="gray" variant="soft" size="xs" class="ml-1 rounded-full">{{ topic.count }}</UBadge>
+        </UButton>
+      </div>
+    </div>
+
+    <!-- My Podcasts Section -->
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold">My Podcasts</h1>
       <UButton to="/search" icon="i-heroicons-plus" label="Add Podcast" />
@@ -68,4 +90,5 @@
 
 <script setup lang="ts">
 const { data: podcasts, status } = await useFetch('/api/podcasts')
+const { data: topics } = await useFetch('/api/topics/trending')
 </script>

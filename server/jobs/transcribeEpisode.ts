@@ -2,6 +2,7 @@ import { db } from '../utils/db';
 import { episodes, transcripts } from '../database/schema';
 import { eq } from 'drizzle-orm';
 import { transcribeAudio } from '../utils/groq';
+import { enqueueJob } from '../utils/queue';
 
 export interface TranscribeEpisodePayload {
   episodeId: string;
@@ -63,4 +64,8 @@ export async function transcribeEpisodeHandler(payload: TranscribeEpisodePayload
   });
 
   console.log(`[Transcription] Transcript saved to database.`);
+
+  // 5. Trigger downstream tasks
+  await enqueueJob('extract_topics', { episodeId });
+  console.log(`[Transcription] Triggered extract_topics job.`);
 }
