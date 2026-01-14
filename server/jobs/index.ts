@@ -1,10 +1,15 @@
 import { podcastImportHandler, type PodcastImportPayload } from './podcastImport';
+import { transcribeEpisodeHandler, type TranscribeEpisodePayload } from './transcribeEpisode';
 
 // Define the Registry Mapping
 export const jobRegistry = {
   'podcast_import': {
     handler: podcastImportHandler,
     concurrency: 3,
+  },
+  'episode_transcription': {
+    handler: transcribeEpisodeHandler,
+    concurrency: 2, // Limit concurrent transcriptions to avoid rate limits or heavy load
   },
 } as const;
 

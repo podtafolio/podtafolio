@@ -34,6 +34,17 @@ export const episodes = sqliteTable('episodes', {
   podcastIdPublishedAtIdx: index('podcast_id_published_at_idx').on(table.podcastId, table.publishedAt),
 }));
 
+export const transcripts = sqliteTable('transcripts', {
+  id: text('id').primaryKey().$defaultFn(() => ulid()),
+  episodeId: text('episode_id').references(() => episodes.id).notNull(),
+  content: text('content').notNull(),
+  language: text('language').notNull().default('en'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  episodeIdIdx: index('episode_id_idx').on(table.episodeId),
+}));
+
 export const jobs = sqliteTable('jobs', {
   id: text('id').primaryKey().$defaultFn(() => ulid()),
   type: text('type').notNull(),
