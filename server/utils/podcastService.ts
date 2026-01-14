@@ -110,6 +110,7 @@ export async function importPodcast(feedUrl: string, podcastId: string) {
  */
 export async function findPodcastsByTermOrFeedUrls(term: string, feedUrls: string[]) {
   const searchCondition = or(
+    // SQLite LIKE is case-insensitive by default
     like(podcasts.title, `%${term}%`),
     like(podcasts.author, `%${term}%`)
   );
