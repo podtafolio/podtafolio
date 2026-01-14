@@ -1,7 +1,8 @@
 import { podcasts } from '../../database/schema'
 import { eq, like, and, count, asc } from 'drizzle-orm'
+import { CACHE_GROUP, CACHE_NAMES } from '../../utils/cache'
 
-export default defineEventHandler(async (event) => {
+export default defineCachedEventHandler(async (event) => {
   const pagination = getPaginationParams(event)
   const { limit, offset } = pagination
   const query = getQuery(event)
@@ -30,4 +31,9 @@ export default defineEventHandler(async (event) => {
     .orderBy(asc(podcasts.title))
 
   return createPaginatedResponse(data, total, pagination)
+}, {
+  group: CACHE_GROUP,
+  name: CACHE_NAMES.PODCASTS_LIST,
+  maxAge: 3600,
+  swr: true
 })

@@ -1,7 +1,8 @@
 import { episodes } from '../../database/schema'
 import { eq } from 'drizzle-orm'
+import { CACHE_GROUP, CACHE_NAMES } from '../../utils/cache'
 
-export default defineEventHandler(async (event) => {
+export default defineCachedEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
 
   if (!id) {
@@ -23,4 +24,9 @@ export default defineEventHandler(async (event) => {
   }
 
   return { data: episode }
+}, {
+  group: CACHE_GROUP,
+  name: CACHE_NAMES.EPISODE,
+  maxAge: 3600,
+  swr: true
 })

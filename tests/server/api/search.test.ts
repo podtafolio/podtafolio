@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 
+vi.stubGlobal('defineCachedEventHandler', (handler: any) => handler)
+
 // Mock dependencies
 vi.mock('../../../server/utils/itunes', () => ({
   searchPodcasts: vi.fn()

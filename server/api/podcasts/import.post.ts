@@ -3,6 +3,7 @@ import { podcasts } from '../../database/schema'
 import { eq } from 'drizzle-orm'
 import { db } from '../../utils/db'
 import { enqueueJob } from '../../utils/queue'
+import { invalidatePodcastCache } from '../../utils/cache'
 
 const importBodySchema = z.object({
   feedUrl: z.string().url()
@@ -39,6 +40,9 @@ export default defineEventHandler(async (event) => {
             .set({ status: 'importing', importError: null, updatedAt: new Date() })
             .where(eq(podcasts.id, existingPodcast.id));
 
+        // Invalidate cache so list shows "Importing..."
+        await invalidatePodcastCache(existingPodcast.id);
+
         // Enqueue job instead of direct promise
         await enqueueJob('podcast_import', { podcastId: existingPodcast.id, feedUrl });
 
@@ -62,6 +66,9 @@ export default defineEventHandler(async (event) => {
     feedUrl: feedUrl,
     status: 'importing'
   }).returning({ id: podcasts.id, status: podcasts.status })
+
+  // Invalidate cache so list shows new podcast
+  await invalidatePodcastCache(newPodcast.id);
 
   // 4. Trigger background import
   // Enqueue job

@@ -2,6 +2,7 @@ import { eq, sql, like, or, inArray } from 'drizzle-orm';
 import { podcasts, episodes } from '../database/schema';
 import { db } from '../utils/db';
 import { parsePodcastFeed } from './feedParser';
+import { invalidatePodcastCache } from './cache';
 
 /**
  * Imports a podcast from a feed URL into the database.
@@ -82,6 +83,9 @@ export async function importPodcast(feedUrl: string, podcastId: string) {
       }
     });
 
+    // Invalidate cache
+    await invalidatePodcastCache(podcastId);
+
     console.log(`[Import] Successfully imported podcast ${podcastId}`);
 
   } catch (error: any) {
@@ -96,6 +100,9 @@ export async function importPodcast(feedUrl: string, podcastId: string) {
                 updatedAt: new Date(),
             })
             .where(eq(podcasts.id, podcastId));
+
+        // Invalidate cache
+        await invalidatePodcastCache(podcastId);
     } catch (dbError) {
         console.error(`[Import] Failed to save error status for ${podcastId}:`, dbError);
     }
