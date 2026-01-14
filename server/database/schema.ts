@@ -38,11 +38,22 @@ export const transcripts = sqliteTable('transcripts', {
   id: text('id').primaryKey().$defaultFn(() => ulid()),
   episodeId: text('episode_id').references(() => episodes.id).notNull(),
   content: text('content').notNull(),
+  segments: text('segments', { mode: 'json' }), // JSON array of segments with timestamps
   language: text('language').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => ({
   episodeIdIdx: index('episode_id_idx').on(table.episodeId),
+}));
+
+export const summaries = sqliteTable('summaries', {
+  id: text('id').primaryKey().$defaultFn(() => ulid()),
+  episodeId: text('episode_id').references(() => episodes.id).notNull(),
+  content: text('content').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  episodeIdIdx: index('summary_episode_id_idx').on(table.episodeId),
 }));
 
 export const jobs = sqliteTable('jobs', {

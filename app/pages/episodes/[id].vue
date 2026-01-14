@@ -46,6 +46,38 @@
         <UCard>
           <template #header>
             <div class="flex items-center justify-between">
+              <h3 class="font-semibold">AI Summary</h3>
+              <UButton
+                  v-if="!summaryData?.data"
+                  :loading="summarizing"
+                  :disabled="!transcriptData?.data"
+                  @click="triggerSummary"
+                  size="xs"
+                  color="primary"
+                  variant="soft"
+                >
+                  Generate Summary
+                </UButton>
+            </div>
+          </template>
+
+          <div v-if="summaryPending" class="py-8 flex justify-center">
+             <UIcon name="i-heroicons-arrow-path" class="animate-spin w-6 h-6 text-gray-400" />
+          </div>
+
+          <div v-else-if="summaryData?.data" class="prose dark:prose-invert max-w-none break-words">
+             <div v-html="md.render(summaryData.data.content)"></div>
+          </div>
+
+           <div v-else class="text-gray-500 italic text-center py-8">
+            <span v-if="!transcriptData?.data">Generate a transcript first to enable summarization.</span>
+            <span v-else>No summary available. Click 'Generate Summary' to create one.</span>
+          </div>
+        </UCard>
+
+        <UCard>
+          <template #header>
+            <div class="flex items-center justify-between">
               <h3 class="font-semibold">Transcript</h3>
               <div class="flex gap-2">
                  <span v-if="transcriptData?.data?.language" class="text-xs font-mono px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">
@@ -83,21 +115,31 @@
 </template>
 
 <script setup lang="ts">
+import MarkdownIt from 'markdown-it'
+
+const md = new MarkdownIt()
 const route = useRoute()
 const id = route.params.id as string
 const toast = useToast()
 
 const { data: episode, pending, error } = await useFetch(`/api/episodes/${id}`)
 
-// Fetch transcript separately, only client side to avoid hydration mismatch if possible,
-// or server side is fine too but we want to refresh it.
+// Fetch transcript separately
 const { data: transcriptData, pending: transcriptPending, refresh: refreshTranscript } = await useFetch(`/api/episodes/${id}/transcript`, {
     key: `transcript-${id}`,
-    server: false, // We can fetch on mount
+    server: false,
+    lazy: true,
+})
+
+// Fetch summary separately
+const { data: summaryData, pending: summaryPending, refresh: refreshSummary } = await useFetch(`/api/episodes/${id}/summary`, {
+    key: `summary-${id}`,
+    server: false,
     lazy: true,
 })
 
 const transcribing = ref(false)
+const summarizing = ref(false)
 
 async function triggerTranscription() {
     transcribing.value = true
@@ -110,12 +152,7 @@ async function triggerTranscription() {
             description: 'The transcription process has started in the background.',
             color: 'green'
         })
-
-        // Poll for result? Or just let user refresh manually?
-        // For now, let's just wait a bit and refresh, or let the user come back.
-        // A simple poll could be nice.
         startPolling()
-
     } catch (e: any) {
         toast.add({
             title: 'Error',
@@ -127,7 +164,31 @@ async function triggerTranscription() {
     }
 }
 
+async function triggerSummary() {
+    summarizing.value = true
+    try {
+        await $fetch(`/api/episodes/${id}/summarize`, {
+            method: 'POST'
+        })
+        toast.add({
+            title: 'Summary queued',
+            description: 'The summary generation has started in the background.',
+            color: 'green'
+        })
+        startPollingSummary()
+    } catch (e: any) {
+        toast.add({
+            title: 'Error',
+            description: e.message || 'Failed to start summary generation',
+            color: 'red'
+        })
+    } finally {
+        summarizing.value = false
+    }
+}
+
 let pollInterval: NodeJS.Timeout | null = null
+let summaryPollInterval: NodeJS.Timeout | null = null
 
 function startPolling() {
     if (pollInterval) clearInterval(pollInterval)
@@ -135,14 +196,27 @@ function startPolling() {
     pollInterval = setInterval(async () => {
         attempts++
         await refreshTranscript()
-        if (transcriptData.value?.data || attempts > 20) { // Stop after ~1 minute (3s * 20)
+        if (transcriptData.value?.data || attempts > 20) {
             if (pollInterval) clearInterval(pollInterval)
+        }
+    }, 3000)
+}
+
+function startPollingSummary() {
+    if (summaryPollInterval) clearInterval(summaryPollInterval)
+    let attempts = 0
+    summaryPollInterval = setInterval(async () => {
+        attempts++
+        await refreshSummary()
+        if (summaryData.value?.data || attempts > 20) {
+            if (summaryPollInterval) clearInterval(summaryPollInterval)
         }
     }, 3000)
 }
 
 onUnmounted(() => {
     if (pollInterval) clearInterval(pollInterval)
+    if (summaryPollInterval) clearInterval(summaryPollInterval)
 })
 
 function formatDuration(seconds: number) {

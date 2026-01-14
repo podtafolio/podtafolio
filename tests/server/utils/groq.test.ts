@@ -25,14 +25,14 @@ describe('groq utils', () => {
   it('should transcribe successfully', async () => {
     const mockResponse = {
       ok: true,
-      json: async () => ({ text: 'Hello world', language: 'en' })
+      json: async () => ({ text: 'Hello world', language: 'en', segments: [] })
     }
     mocks.fetch.mockResolvedValue(mockResponse)
 
     const buffer = Buffer.from('test audio')
     const result = await transcribeAudio(buffer, 'test.mp3')
 
-    expect(result).toEqual({ text: 'Hello world', language: 'en' })
+    expect(result).toEqual({ text: 'Hello world', language: 'en', segments: [] })
     expect(mocks.fetch).toHaveBeenCalledWith('https://api.groq.com/openai/v1/audio/transcriptions', expect.objectContaining({
       method: 'POST',
       headers: {

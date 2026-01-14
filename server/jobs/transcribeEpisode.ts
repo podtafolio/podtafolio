@@ -47,19 +47,10 @@ export async function transcribeEpisodeHandler(payload: TranscribeEpisodePayload
 
   // 3. Call Groq API
   console.log(`[Transcription] Calling Groq API...`);
-  const { text, language } = await transcribeAudio(audioBuffer, filename);
-  console.log(`[Transcription] Transcription complete. Language: ${language}, Length: ${text.length}`);
+  const { text, language, segments } = await transcribeAudio(audioBuffer, filename);
+  console.log(`[Transcription] Transcription complete. Language: ${language}, Length: ${text.length}, Segments: ${segments.length}`);
 
   // 4. Insert into transcripts table
-  // We use a transaction or just insert. Since we might want to support multiple transcripts later,
-  // we check if one exists for this language or just add it.
-  // For now, let's assume one transcript per episode or just simple insert.
-  // The schema allows multiple transcripts (one-to-many), but unique constraint is not on (episodeId, language).
-  // Let's just insert. If we re-run, we might want to clean up old ones or just add new one.
-  // To keep it simple and avoid duplicates for the same job, let's delete existing for this episode?
-  // Or better, let's just insert. The user might want multiple versions.
-  // Wait, the plan says "store detected language".
-
   // Let's delete previous transcript for this episode to avoid clutter for now,
   // until we have a proper UI to manage multiple versions.
   await db.delete(transcripts).where(eq(transcripts.episodeId, episodeId));
@@ -68,6 +59,7 @@ export async function transcribeEpisodeHandler(payload: TranscribeEpisodePayload
     episodeId: episodeId,
     content: text,
     language: language,
+    segments: segments,
   });
 
   console.log(`[Transcription] Transcript saved to database.`);
