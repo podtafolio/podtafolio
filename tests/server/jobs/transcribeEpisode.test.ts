@@ -3,6 +3,7 @@ import { transcribeEpisodeHandler } from "../../../server/jobs/transcribeEpisode
 import { db } from "../../../server/utils/db";
 import * as groq from "../../../server/utils/groq";
 import * as storage from "../../../server/utils/storage";
+import * as queue from "../../../server/utils/queue";
 import { Readable } from "node:stream";
 
 // 1. Hoist the mocks variables
@@ -76,6 +77,11 @@ vi.mock("../../../server/utils/groq", () => ({
 vi.mock("../../../server/utils/storage", () => ({
   uploadFileToStorage: vi.fn(),
   deleteFileFromStorage: vi.fn(),
+}));
+
+// Mock Queue
+vi.mock("../../../server/utils/queue", () => ({
+  enqueueJob: vi.fn(),
 }));
 
 // Stub Global Fetch
@@ -178,6 +184,9 @@ describe("transcribeEpisodeHandler", () => {
     );
     expect(storage.uploadFileToStorage).not.toHaveBeenCalled();
     expect(db.insert).toHaveBeenCalledTimes(1);
+    expect(queue.enqueueJob).toHaveBeenCalledWith("extract_topics", {
+      episodeId: "ep_1",
+    });
     expect(mocks.fs.unlinkSync).toHaveBeenCalled();
   });
 
