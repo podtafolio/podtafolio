@@ -95,3 +95,20 @@ export const jobs = sqliteTable('jobs', {
 }, (table) => ({
   statusIdx: index('status_idx').on(table.status),
 }));
+
+export const topics = sqliteTable('topics', {
+  id: text('id').primaryKey().$defaultFn(() => ulid()),
+  name: text('name').notNull().unique(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
+export const episodesTopics = sqliteTable('episodes_topics', {
+  episodeId: text('episode_id').references(() => episodes.id).notNull(),
+  topicId: text('topic_id').references(() => topics.id).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.episodeId, table.topicId] }),
+  episodeIdIdx: index('episodes_topics_episode_id_idx').on(table.episodeId),
+  topicIdIdx: index('episodes_topics_topic_id_idx').on(table.topicId),
+}));

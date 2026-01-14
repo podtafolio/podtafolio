@@ -2,6 +2,7 @@ import { podcastImportHandler, type PodcastImportPayload } from './podcastImport
 import { transcribeEpisodeHandler, type TranscribeEpisodePayload } from './transcribeEpisode';
 import { summarizeEpisodeHandler, type SummarizeEpisodePayload } from './summarizeEpisode';
 import { extractEntitiesHandler, type ExtractEntitiesPayload } from './extractEntities';
+import { extractTopicsHandler, type ExtractTopicsPayload } from './extractTopics';
 
 // Define the Registry Mapping
 export const jobRegistry = {
@@ -20,6 +21,10 @@ export const jobRegistry = {
   'extract_entities': {
       handler: extractEntitiesHandler,
       concurrency: 5, // Lightweight job compared to audio processing
+  },
+  'extract_topics': {
+      handler: extractTopicsHandler,
+      concurrency: 5,
   }
 } as const;
 
