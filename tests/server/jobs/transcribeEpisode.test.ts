@@ -5,6 +5,18 @@ import * as groq from "../../../server/utils/groq";
 import * as storage from "../../../server/utils/storage";
 import * as queue from "../../../server/utils/queue";
 import { Readable } from "node:stream";
+import type { Job } from "bullmq";
+import type { TranscribeEpisodePayload } from "../../../server/jobs/transcribeEpisode";
+
+// Helper to create mock BullMQ Job
+function createMockJob(
+  data: TranscribeEpisodePayload
+): Job<TranscribeEpisodePayload> {
+  return {
+    data,
+    log: vi.fn().mockResolvedValue(undefined),
+  } as unknown as Job<TranscribeEpisodePayload>;
+}
 
 // 1. Hoist the mocks variables
 const mocks = vi.hoisted(() => {
@@ -143,7 +155,7 @@ describe("transcribeEpisodeHandler", () => {
     });
 
     // 3. Run
-    await transcribeEpisodeHandler({ episodeId: "ep_1" });
+    await transcribeEpisodeHandler(createMockJob({ episodeId: "ep_1" }));
 
     // 4. Assert
     expect(groq.transcribeAudio).not.toHaveBeenCalled();
@@ -180,7 +192,7 @@ describe("transcribeEpisodeHandler", () => {
     // 6. Assert
     expect(groq.transcribeAudio).toHaveBeenCalledWith(
       expect.any(Buffer),
-      "audio.mp3",
+      "audio.mp3"
     );
     expect(storage.uploadFileToStorage).not.toHaveBeenCalled();
     expect(db.insert).toHaveBeenCalledTimes(1);
@@ -209,7 +221,7 @@ describe("transcribeEpisodeHandler", () => {
 
     // 4. Mock Storage
     (storage.uploadFileToStorage as any).mockResolvedValue(
-      "https://r2.example.com/file.mp3",
+      "https://r2.example.com/file.mp3"
     );
 
     // 5. Mock Groq
@@ -225,7 +237,7 @@ describe("transcribeEpisodeHandler", () => {
     // 7. Assert
     expect(storage.uploadFileToStorage).toHaveBeenCalled();
     expect(groq.transcribeAudio).toHaveBeenCalledWith(
-      "https://r2.example.com/file.mp3",
+      "https://r2.example.com/file.mp3"
     );
     expect(storage.deleteFileFromStorage).toHaveBeenCalled();
     expect(db.insert).toHaveBeenCalled();

@@ -2,6 +2,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { extractTopicsHandler } from "../../../server/jobs/extractTopics";
 import { db } from "../../../server/utils/db";
 import { generateObject } from "ai";
+import type { Job } from "bullmq";
+import type { ExtractTopicsPayload } from "../../../server/jobs/extractTopics";
+
+// Helper to create mock BullMQ Job
+function createMockJob(data: ExtractTopicsPayload): Job<ExtractTopicsPayload> {
+  return {
+    data,
+    log: vi.fn().mockResolvedValue(undefined),
+  } as unknown as Job<ExtractTopicsPayload>;
+}
 
 // Mock dependencies
 vi.mock("../../../server/utils/db", () => {
@@ -53,7 +63,7 @@ describe("extractTopicsHandler", () => {
       },
     });
 
-    await extractTopicsHandler({ episodeId: "ep-1" });
+    await extractTopicsHandler(createMockJob({ episodeId: "ep-1" }));
 
     expect(db.query.transcripts.findFirst).toHaveBeenCalled();
     expect(generateObject).toHaveBeenCalled();
@@ -86,7 +96,7 @@ describe("extractTopicsHandler", () => {
       name: "AI",
     });
 
-    await extractTopicsHandler({ episodeId: "ep-1" });
+    await extractTopicsHandler(createMockJob({ episodeId: "ep-1" }));
 
     // Should check if topic exists
     expect(db.query.topics.findFirst).toHaveBeenCalled();

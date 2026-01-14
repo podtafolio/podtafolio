@@ -1,5 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { summarizeEpisodeHandler } from "../../../server/jobs/summarizeEpisode";
+import type { Job } from "bullmq";
+import type { SummarizeEpisodePayload } from "../../../server/jobs/summarizeEpisode";
+
+// Helper to create mock BullMQ Job
+function createMockJob(
+  data: SummarizeEpisodePayload
+): Job<SummarizeEpisodePayload> {
+  return {
+    data,
+    log: vi.fn().mockResolvedValue(undefined),
+  } as unknown as Job<SummarizeEpisodePayload>;
+}
 
 const mocks = vi.hoisted(() => {
   return {
@@ -60,7 +72,7 @@ describe("summarizeEpisodeHandler", () => {
     mocks.db.query.episodes.findFirst.mockResolvedValue(episodeMock);
     mocks.generateText.mockResolvedValue({ text: "Summary content" });
 
-    await summarizeEpisodeHandler({ episodeId });
+    await summarizeEpisodeHandler(createMockJob({ episodeId }));
 
     expect(mocks.generateText).toHaveBeenCalled();
     const callArgs = mocks.generateText.mock.calls[0][0];

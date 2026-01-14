@@ -45,6 +45,18 @@ vi.mock("drizzle-orm", async () => {
 });
 
 import { extractEntitiesHandler } from "../../../server/jobs/extractEntities";
+import type { Job } from "bullmq";
+import type { ExtractEntitiesPayload } from "../../../server/jobs/extractEntities";
+
+// Helper to create mock BullMQ Job
+function createMockJob(
+  data: ExtractEntitiesPayload
+): Job<ExtractEntitiesPayload> {
+  return {
+    data,
+    log: vi.fn().mockResolvedValue(undefined),
+  } as unknown as Job<ExtractEntitiesPayload>;
+}
 
 describe("extractEntitiesHandler", () => {
   beforeEach(() => {
@@ -89,7 +101,7 @@ describe("extractEntitiesHandler", () => {
     // 1. Elon Musk: Not found
     mocks.db.query.entities.findFirst.mockResolvedValue(null);
 
-    await extractEntitiesHandler({ episodeId: "ep1" });
+    await extractEntitiesHandler(createMockJob({ episodeId: "ep1" }));
 
     // Verify
     expect(mocks.db.query.transcripts.findFirst).toHaveBeenCalled();
