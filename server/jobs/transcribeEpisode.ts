@@ -7,18 +7,18 @@ import { uploadFileToStorage, deleteFileFromStorage } from "../utils/storage";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
+import { Job } from "bullmq";
 
 export interface TranscribeEpisodePayload {
   episodeId: string;
 }
 
 export async function transcribeEpisodeHandler(
-  payload: TranscribeEpisodePayload,
+  job: Job<TranscribeEpisodePayload>,
 ) {
-  const { episodeId } = payload;
-  console.log(
+  const { episodeId } = job.data;
+  await job.log(
     `[Transcription] Starting transcription for episode ${episodeId}`,
   );
 
@@ -36,7 +36,7 @@ export async function transcribeEpisodeHandler(
   }
 
   // 2. Download audio file using stream
-  console.log(`[Transcription] Downloading audio from ${episode.audioUrl}`);
+  await job.log(`[Transcription] Downloading audio from ${episode.audioUrl}`);
   const audioResponse = await fetch(episode.audioUrl);
 
   if (!audioResponse.ok || !audioResponse.body) {
@@ -90,7 +90,7 @@ export async function transcribeEpisodeHandler(
   });
 
   const hash = hashStream.digest("hex");
-  console.log(`[Transcription] Audio hash: ${hash}`);
+  await job.log(`[Transcription] Audio hash: ${hash}`);
 
   // 3. Check for existing transcript with same hash
   const existingTranscript = await db.query.transcripts.findFirst({
@@ -101,7 +101,7 @@ export async function transcribeEpisodeHandler(
   });
 
   if (existingTranscript) {
-    console.log(
+    await job.log(
       `[Transcription] Transcript already exists for this audio version (hash: ${hash}). Skipping.`,
     );
     // Cleanup temp file
@@ -125,7 +125,7 @@ export async function transcribeEpisodeHandler(
 
   try {
     if (fileSizeInBytes > MAX_FILE_SIZE) {
-      console.log(
+      await job.log(
         `[Transcription] File size (${(fileSizeInBytes / 1024 / 1024).toFixed(
           2,
         )}MB) exceeds 25MB. Uploading to R2...`,
@@ -151,7 +151,8 @@ export async function transcribeEpisodeHandler(
           storageKey,
           contentType,
         );
-        console.log(
+
+        await job.log(
           `[Transcription] Uploaded to ${publicUrl}. Calling Groq with URL...`,
         );
 
@@ -160,18 +161,17 @@ export async function transcribeEpisodeHandler(
         language = result.language;
         segments = result.segments;
       } finally {
-        console.log(`[Transcription] Cleaning up temporary file from R2...`);
+        await job.log(`[Transcription] Cleaning up temporary file from R2...`);
         try {
           await deleteFileFromStorage(storageKey);
         } catch (cleanupError) {
-          console.error(
-            `[Transcription] Failed to delete temporary file ${storageKey}:`,
-            cleanupError,
+          await job.log(
+            `Error: [Transcription] Failed to delete temporary file ${storageKey}: ${String(cleanupError)}`,
           );
         }
       }
     } else {
-      console.log(
+      await job.log(
         `[Transcription] File size is small. Calling Groq directly...`,
       );
       // Read file buffer
@@ -182,7 +182,7 @@ export async function transcribeEpisodeHandler(
       segments = result.segments;
     }
 
-    console.log(
+    await job.log(
       `[Transcription] Transcription complete. Language: ${language}, Length: ${text.length}, Segments: ${segments.length}`,
     );
 
@@ -197,11 +197,11 @@ export async function transcribeEpisodeHandler(
       audioHash: hash,
     });
 
-    console.log(`[Transcription] Transcript saved to database.`);
+    await job.log(`[Transcription] Transcript saved to database.`);
 
     // 5. Trigger downstream tasks
     await enqueueJob("extract_topics", { episodeId });
-    console.log(`[Transcription] Triggered extract_topics job.`);
+    await job.log(`[Transcription] Triggered extract_topics job.`);
   } finally {
     // Cleanup local temp file
     if (fs.existsSync(tempFilePath)) {

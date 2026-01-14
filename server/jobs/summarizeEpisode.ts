@@ -3,16 +3,17 @@ import { episodes, transcripts, summaries } from "../database/schema";
 import { eq } from "drizzle-orm";
 import { google } from "../utils/ai";
 import { generateText } from "ai";
+import { Job } from "bullmq";
 
 export interface SummarizeEpisodePayload {
   episodeId: string;
 }
 
 export async function summarizeEpisodeHandler(
-  payload: SummarizeEpisodePayload,
+  job: Job<SummarizeEpisodePayload>,
 ) {
-  const { episodeId } = payload;
-  console.log(`[Summary] Starting summary for episode ${episodeId}`);
+  const { episodeId } = job.data;
+  await job.log(`[Summary] Starting summary for episode ${episodeId}`);
 
   // 1. Fetch transcript
   const transcript = await db.query.transcripts.findFirst({
@@ -44,7 +45,7 @@ export async function summarizeEpisodeHandler(
       .join("\n");
   } else {
     contentInput = transcript.content;
-    console.warn(
+    await job.log(
       `[Summary] No segments found for episode ${episodeId}, using plain text.`,
     );
   }
@@ -83,9 +84,11 @@ ${contentInput}
       content: text,
     });
 
-    console.log(`[Summary] Summary generated and saved.`);
+    await job.log(`[Summary] Summary generated and saved.`);
   } catch (error: any) {
-    console.error("[Summary] Error generating summary:", error);
+    await job.log(
+      "Error: [Summary] Error generating summary: " + String(error),
+    );
     throw error;
   }
 }

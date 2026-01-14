@@ -1,6 +1,5 @@
 import { db } from "../utils/db";
 import {
-  episodes,
   transcripts,
   entities,
   episodesEntities,
@@ -10,14 +9,15 @@ import { eq } from "drizzle-orm";
 import { google } from "../utils/ai";
 import { generateObject } from "ai";
 import { z } from "zod";
+import { Job } from "bullmq";
 
 export interface ExtractEntitiesPayload {
   episodeId: string;
 }
 
-export async function extractEntitiesHandler(payload: ExtractEntitiesPayload) {
-  const { episodeId } = payload;
-  console.log(`[Entities] Starting extraction for episode ${episodeId}`);
+export async function extractEntitiesHandler(job: Job<ExtractEntitiesPayload>) {
+  const { episodeId } = job.data;
+  await job.log(`[Entities] Starting extraction for episode ${episodeId}`);
 
   // 1. Fetch transcript
   const transcript = await db.query.transcripts.findFirst({
@@ -70,11 +70,13 @@ export async function extractEntitiesHandler(payload: ExtractEntitiesPayload) {
 
     const extracted = object.entities;
     if (!extracted || extracted.length === 0) {
-      console.log(`[Entities] No entities found for episode ${episodeId}`);
+      await job.log(`[Entities] No entities found for episode ${episodeId}`);
       return;
     }
 
-    console.log(`[Entities] Found ${extracted.length} entities. Upserting...`);
+    await job.log(
+      `[Entities] Found ${extracted.length} entities. Upserting...`,
+    );
 
     // 4. Upsert Entities and Link
     for (const entity of extracted) {
@@ -146,9 +148,8 @@ export async function extractEntitiesHandler(payload: ExtractEntitiesPayload) {
           if (retry) {
             entityId = retry.id;
           } else {
-            console.error(
-              `[Entities] Failed to insert entity ${entity.name}`,
-              e,
+            await job.log(
+              `Error: [Entities] Failed to insert entity ${entity.name}. ${String(e)}`,
             );
             continue;
           }
@@ -165,9 +166,12 @@ export async function extractEntitiesHandler(payload: ExtractEntitiesPayload) {
         .onConflictDoNothing();
     }
 
-    console.log(`[Entities] Extraction complete for episode ${episodeId}`);
+    await job.log(`[Entities] Extraction complete for episode ${episodeId}`);
   } catch (error) {
-    console.error("[Entities] Error extracting entities:", error);
+    await job.log(
+      "Error: [Entities] Error extracting entities: " + String(error),
+    );
+
     throw error;
   }
 }

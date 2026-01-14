@@ -1,23 +1,8 @@
-import {
-  podcastImportHandler,
-  type PodcastImportPayload,
-} from "./podcastImport";
-import {
-  transcribeEpisodeHandler,
-  type TranscribeEpisodePayload,
-} from "./transcribeEpisode";
-import {
-  summarizeEpisodeHandler,
-  type SummarizeEpisodePayload,
-} from "./summarizeEpisode";
-import {
-  extractEntitiesHandler,
-  type ExtractEntitiesPayload,
-} from "./extractEntities";
-import {
-  extractTopicsHandler,
-  type ExtractTopicsPayload,
-} from "./extractTopics";
+import { podcastImportHandler } from "./podcastImport";
+import { transcribeEpisodeHandler } from "./transcribeEpisode";
+import { summarizeEpisodeHandler } from "./summarizeEpisode";
+import { extractEntitiesHandler } from "./extractEntities";
+import { extractTopicsHandler } from "./extractTopics";
 import {
   JOB_PODCAST_IMPORT,
   JOB_EPISODE_TRANSCRIPTION,
@@ -53,10 +38,15 @@ export const jobRegistry = {
 
 export type { JobType } from "./keys";
 
+import type { Job } from "bullmq";
+
+// Helper type to extract Data type from Job<Data>
+type ExtractJobData<T> = T extends Job<infer Data> ? Data : never;
+
 // Helper type to derive payload type from job type key
-export type JobPayload<T extends JobType> = Parameters<
-  (typeof jobRegistry)[T]["handler"]
->[0];
+export type JobPayload<T extends JobType> = ExtractJobData<
+  Parameters<(typeof jobRegistry)[T]["handler"]>[0]
+>;
 
 // Generic handler type
 export type JobHandler = (payload: any) => Promise<void>;

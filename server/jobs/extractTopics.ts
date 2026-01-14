@@ -1,22 +1,18 @@
 import { db } from "../utils/db";
-import {
-  episodes,
-  transcripts,
-  topics,
-  episodesTopics,
-} from "../database/schema";
+import { transcripts, topics, episodesTopics } from "../database/schema";
 import { eq } from "drizzle-orm";
 import { google } from "../utils/ai";
 import { generateObject } from "ai";
 import { z } from "zod";
+import { Job } from "bullmq";
 
 export interface ExtractTopicsPayload {
   episodeId: string;
 }
 
-export async function extractTopicsHandler(payload: ExtractTopicsPayload) {
-  const { episodeId } = payload;
-  console.log(`[Topics] Starting extraction for episode ${episodeId}`);
+export async function extractTopicsHandler(job: Job<ExtractTopicsPayload>) {
+  const { episodeId } = job.data;
+  await job.log(`[Topics] Starting extraction for episode ${episodeId}`);
 
   // 1. Fetch transcript
   const transcript = await db.query.transcripts.findFirst({
@@ -68,11 +64,11 @@ export async function extractTopicsHandler(payload: ExtractTopicsPayload) {
 
     const extractedTopics = object.topics;
     if (!extractedTopics || extractedTopics.length === 0) {
-      console.log(`[Topics] No topics found for episode ${episodeId}`);
+      await job.log(`[Topics] No topics found for episode ${episodeId}`);
       return;
     }
 
-    console.log(
+    await job.log(
       `[Topics] Found ${extractedTopics.length} topics. Upserting...`,
     );
 
@@ -103,9 +99,8 @@ export async function extractTopicsHandler(payload: ExtractTopicsPayload) {
           if (retry) {
             topicId = retry.id;
           } else {
-            console.error(
-              `[Topics] Failed to insert topic ${normalizedName}`,
-              e,
+            await job.log(
+              `[Topics] Failed to insert topic ${normalizedName}: ${String(e)}`,
             );
             continue;
           }
@@ -122,9 +117,9 @@ export async function extractTopicsHandler(payload: ExtractTopicsPayload) {
         .onConflictDoNothing();
     }
 
-    console.log(`[Topics] Extraction complete for episode ${episodeId}`);
+    await job.log(`[Topics] Extraction complete for episode ${episodeId}`);
   } catch (error) {
-    console.error("[Topics] Error extracting topics:", error);
+    await job.log("Error: [Topics] Error extracting topics: " + String(error));
     throw error;
   }
 }
