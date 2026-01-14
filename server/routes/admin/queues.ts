@@ -1,7 +1,7 @@
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { H3Adapter } from "@bull-board/h3";
-import { queues } from "../../../utils/queue";
+import { queues } from "../../utils/queue";
 import { H3Event } from "h3";
 
 const serverAdapter = new H3Adapter();
