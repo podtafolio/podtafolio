@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 import { ulid } from 'ulid';
 
 export const podcasts = sqliteTable('podcasts', {
@@ -30,6 +30,8 @@ export const episodes = sqliteTable('episodes', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => ({
   uniqueEpisode: uniqueIndex('unique_episode').on(table.podcastId, table.guid),
+  publishedAtIdx: index('published_at_idx').on(table.publishedAt),
+  podcastIdPublishedAtIdx: index('podcast_id_published_at_idx').on(table.podcastId, table.publishedAt),
 }));
 
 export const jobs = sqliteTable('jobs', {
@@ -42,4 +44,6 @@ export const jobs = sqliteTable('jobs', {
   startedAt: integer('started_at', { mode: 'timestamp' }),
   completedAt: integer('completed_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => ({
+  statusIdx: index('status_idx').on(table.status),
+}));
