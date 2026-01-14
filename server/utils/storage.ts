@@ -33,7 +33,7 @@ export async function uploadFileToStorage(
   // However, for transcription, Groq downloads the file. Content-Type is less critical for the API than for a browser.
   // But let's try to pass it if possible or accept default.
 
-  await storage.setItem(cleanKey, data);
+  await storage.setItemRaw(cleanKey, data);
 
   // Construct public URL
   let domain = getPublicDomain();
