@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, like, or, inArray } from 'drizzle-orm';
 import { podcasts, episodes } from '../database/schema';
 import { db } from '../utils/db';
 import { parsePodcastFeed } from './feedParser';
@@ -100,4 +100,27 @@ export async function importPodcast(feedUrl: string, podcastId: string) {
         console.error(`[Import] Failed to save error status for ${podcastId}:`, dbError);
     }
   }
+}
+
+/**
+ * Searches for podcasts in the local database by term or matching feed URLs.
+ *
+ * @param term Search term for title or author
+ * @param feedUrls List of feed URLs to check for existence
+ */
+export async function findPodcastsByTermOrFeedUrls(term: string, feedUrls: string[]) {
+  const searchCondition = or(
+    like(podcasts.title, `%${term}%`),
+    like(podcasts.author, `%${term}%`)
+  );
+
+  let finalCondition;
+  if (feedUrls.length > 0) {
+    // Check if term matches OR feedUrl matches
+    finalCondition = or(searchCondition, inArray(podcasts.feedUrl, feedUrls));
+  } else {
+    finalCondition = searchCondition;
+  }
+
+  return await db.select().from(podcasts).where(finalCondition);
 }
