@@ -5,8 +5,24 @@ import {
   uniqueIndex,
   index,
   primaryKey,
+  customType,
 } from "drizzle-orm/sqlite-core";
 import { ulid } from "ulid";
+import { EMBEDDING_DIMENSIONS } from "../utils/constants";
+
+const float32Array = customType<{ data: number[]; driverData: Buffer }>({
+  dataType() {
+    return `F32_BLOB(${EMBEDDING_DIMENSIONS})`;
+  },
+  fromDriver(value: Buffer) {
+    return Array.from(
+      new Float32Array(value.buffer, value.byteOffset, value.byteLength / 4),
+    );
+  },
+  toDriver(value: number[]) {
+    return Buffer.from(new Float32Array(value).buffer);
+  },
+});
 
 export const podcasts = sqliteTable("podcasts", {
   id: text("id")
@@ -133,6 +149,7 @@ export const entities = sqliteTable("entities", {
     .$defaultFn(() => ulid()),
   name: text("name").notNull().unique(),
   typeId: text("type_id").references(() => entityTypes.id),
+  embedding: float32Array("embedding"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
