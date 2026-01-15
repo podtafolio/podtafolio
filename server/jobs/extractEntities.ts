@@ -5,11 +5,12 @@ import {
   episodesEntities,
   entityTypes,
 } from "../database/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { google } from "../utils/ai";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { Job } from "bullmq";
+import { generateEmbedding } from "../utils/embeddings";
 
 export interface ExtractEntitiesPayload {
   episodeId: string;
@@ -75,11 +76,46 @@ export async function extractEntitiesHandler(job: Job<ExtractEntitiesPayload>) {
     }
 
     await job.log(
-      `[Entities] Found ${extracted.length} entities. Upserting...`,
+      `[Entities] Found ${extracted.length} entities. Processing...`,
     );
 
+    // Pre-processing: Identify unique names and fetch existing entities
+    // Remove duplicates from extraction list by name to avoid redundant processing
+    const distinctExtracted = new Map<string, typeof extracted[0]>();
+    for (const e of extracted) {
+        if (!distinctExtracted.has(e.name)) {
+            distinctExtracted.set(e.name, e);
+        }
+    }
+    const uniqueExtracted = Array.from(distinctExtracted.values());
+    const distinctNames = uniqueExtracted.map(e => e.name);
+
+    // Fetch existing entities by name (Exact Match)
+    const existingEntities = await db.query.entities.findMany({
+        where: inArray(entities.name, distinctNames)
+    });
+
+    // Map: Name -> Entity
+    const entityMap = new Map(existingEntities.map(e => [e.name, e]));
+
+    // Identify which ones need embeddings (no exact match)
+    const needsEmbedding = distinctNames.filter(name => !entityMap.has(name));
+
+    await job.log(`[Entities] ${existingEntities.length} exact matches found. Generating embeddings for ${needsEmbedding.length} candidates...`);
+
+    // Generate embeddings in parallel
+    const embeddingsMap = new Map<string, number[]>();
+    await Promise.all(needsEmbedding.map(async (name) => {
+        try {
+            const emb = await generateEmbedding(name);
+            embeddingsMap.set(name, emb);
+        } catch (e) {
+            await job.log(`[Entities] Warning: Failed to generate embedding for ${name}: ${String(e)}`);
+        }
+    }));
+
     // 4. Upsert Entities and Link
-    for (const entity of extracted) {
+    for (const entity of uniqueExtracted) {
       // Resolve Type
       let typeId: string;
       const normalizedType = entity.type.trim();
@@ -118,42 +154,66 @@ export async function extractEntitiesHandler(job: Job<ExtractEntitiesPayload>) {
       // Resolve Entity
       let entityId: string;
 
-      const existingEntity = await db.query.entities.findFirst({
-        where: eq(entities.name, entity.name),
-      });
+      // Check pre-fetched exact match map
+      if (entityMap.has(entity.name)) {
+          const existing = entityMap.get(entity.name)!;
+          entityId = existing.id;
 
-      if (existingEntity) {
-        entityId = existingEntity.id;
-        // Optionally update type if missing?
-        if (!existingEntity.typeId && typeId) {
-          await db
-            .update(entities)
-            .set({ typeId })
-            .where(eq(entities.id, entityId));
-        }
-      } else {
-        try {
-          const [inserted] = await db
-            .insert(entities)
-            .values({
-              name: entity.name,
-              typeId: typeId,
-            })
-            .returning({ id: entities.id });
-          entityId = inserted.id;
-        } catch (e) {
-          const retry = await db.query.entities.findFirst({
-            where: eq(entities.name, entity.name),
-          });
-          if (retry) {
-            entityId = retry.id;
-          } else {
-            await job.log(
-              `Error: [Entities] Failed to insert entity ${entity.name}. ${String(e)}`,
-            );
-            continue;
+          if (!existing.typeId && typeId) {
+             await db.update(entities).set({ typeId }).where(eq(entities.id, entityId));
           }
-        }
+      } else {
+          // Fuzzy Search / Create
+          let vectorMatchId: string | null = null;
+          const embedding = embeddingsMap.get(entity.name);
+
+          if (embedding) {
+            try {
+                const embeddingString = JSON.stringify(embedding);
+                const result = await db.run(
+                    sql`SELECT entities.id, vector_distance_cos(entities.embedding, vector(${embeddingString})) as distance
+                        FROM vector_top_k('entities_embedding_idx', vector(${embeddingString}), 1) as v
+                        JOIN entities ON entities.rowid = v.id
+                        WHERE distance < 0.35`
+                );
+
+                if (result.rows && result.rows.length > 0) {
+                    const bestMatch = result.rows[0] as any;
+                    await job.log(`[Entities] Fuzzy match found: "${entity.name}" matched with entity ID ${bestMatch.id} (dist: ${bestMatch.distance})`);
+                    vectorMatchId = bestMatch.id;
+                }
+            } catch (err) {
+                await job.log(`[Entities] Warning: Vector search failed for "${entity.name}": ${String(err)}`);
+            }
+          }
+
+          if (vectorMatchId) {
+             entityId = vectorMatchId;
+          } else {
+             // Create New
+             try {
+                const [inserted] = await db
+                    .insert(entities)
+                    .values({
+                        name: entity.name,
+                        typeId: typeId,
+                        embedding: embedding,
+                    })
+                    .returning({ id: entities.id });
+
+                entityId = inserted.id;
+             } catch (e) {
+                const retry = await db.query.entities.findFirst({
+                    where: eq(entities.name, entity.name),
+                });
+                if (retry) {
+                    entityId = retry.id;
+                } else {
+                    await job.log(`Error: [Entities] Failed to insert entity ${entity.name}. ${String(e)}`);
+                    continue;
+                }
+             }
+          }
       }
 
       // Link to Episode

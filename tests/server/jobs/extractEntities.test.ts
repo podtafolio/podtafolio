@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => {
         },
         entities: {
           findFirst: vi.fn(),
+          findMany: vi.fn(),
         },
         entityTypes: {
           findFirst: vi.fn(),
@@ -16,10 +17,12 @@ const mocks = vi.hoisted(() => {
       },
       insert: vi.fn(),
       delete: vi.fn(),
-      update: vi.fn(), // Added update
+      update: vi.fn(),
+      run: vi.fn(),
     },
     generateObject: vi.fn(),
     google: vi.fn(),
+    generateEmbedding: vi.fn(),
     eq: vi.fn(),
   };
 });
@@ -34,6 +37,10 @@ vi.mock("ai", () => ({
 
 vi.mock("../../../server/utils/ai", () => ({
   google: mocks.google,
+}));
+
+vi.mock("../../../server/utils/embeddings", () => ({
+  generateEmbedding: mocks.generateEmbedding,
 }));
 
 vi.mock("drizzle-orm", async () => {
@@ -59,12 +66,17 @@ function createMockJob(
 }
 
 describe("extractEntitiesHandler", () => {
+  let mockValues: any;
+  let mockReturning: any;
+  let mockOnConflictDoNothing: any;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default mocks for insert returning
-    const mockValues = vi.fn();
-    const mockReturning = vi.fn().mockResolvedValue([{ id: "new_id" }]);
-    const mockOnConflictDoNothing = vi.fn();
+
+    // Setup chaining for db.insert
+    mockValues = vi.fn();
+    mockReturning = vi.fn().mockResolvedValue([{ id: "new_id" }]);
+    mockOnConflictDoNothing = vi.fn();
 
     mocks.db.insert.mockReturnValue({
       values: mockValues,
@@ -73,49 +85,122 @@ describe("extractEntitiesHandler", () => {
       returning: mockReturning,
       onConflictDoNothing: mockOnConflictDoNothing,
     }));
+
+    // Setup chaining for db.update
+    const mockSet = vi.fn();
+    const mockWhere = vi.fn();
+    mocks.db.update.mockReturnValue({
+      set: mockSet
+    });
+    mockSet.mockReturnValue({
+        where: mockWhere
+    });
+
+    // Default: Run returns empty rows
+    mocks.db.run.mockResolvedValue({ rows: [] });
+
+    // Default: findMany returns empty array
+    mocks.db.query.entities.findMany.mockResolvedValue([]);
   });
 
-  it("should extract entities, create types, and save them", async () => {
+  it("should use vector search if exact match fails", async () => {
     // Setup Transcript
     mocks.db.query.transcripts.findFirst.mockResolvedValue({
       episodeId: "ep1",
-      content: "Hello, I am Elon Musk and I live in the United States.",
-      segments: [
-        { text: "Hello, I am Elon Musk" },
-        { text: "and I live in the United States." },
-      ],
+      content: "Hello",
+      segments: [],
     });
 
     // Setup AI response
     mocks.generateObject.mockResolvedValue({
       object: {
-        entities: [{ name: "Elon Musk", type: "Person" }],
+        entities: [{ name: "Fuzzy Entity", type: "Person" }],
       },
     });
 
-    // Setup Type Lookup
-    // 1. Person: Not found
-    mocks.db.query.entityTypes.findFirst.mockResolvedValue(null);
+    // Type found
+    mocks.db.query.entityTypes.findFirst.mockResolvedValue({ id: "type_person" });
 
-    // Setup Entity Lookup
-    // 1. Elon Musk: Not found
-    mocks.db.query.entities.findFirst.mockResolvedValue(null);
+    // Entity Exact Match: Not found in findMany
+    mocks.db.query.entities.findMany.mockResolvedValue([]);
+
+    // Mock Embedding
+    mocks.generateEmbedding.mockResolvedValue([0.1, 0.2, 0.3]);
+
+    // Mock Vector Search (Fuzzy match)
+    mocks.db.run.mockResolvedValue({
+        rows: [{ id: "existing_vector_id", distance: 0.1 }]
+    });
 
     await extractEntitiesHandler(createMockJob({ episodeId: "ep1" }));
 
-    // Verify
-    expect(mocks.db.query.transcripts.findFirst).toHaveBeenCalled();
-    expect(mocks.generateObject).toHaveBeenCalled();
+    // Verify generateEmbedding called
+    expect(mocks.generateEmbedding).toHaveBeenCalledWith("Fuzzy Entity");
 
-    // Should insert Type 'Person'
-    // Should insert Entity 'Elon Musk'
-    // Should insert Link
+    // Verify vector search called (db.run)
+    expect(mocks.db.run).toHaveBeenCalled();
 
-    // We can't easily check exact call order with shared mock, but we can check call counts
-    // db.insert called for:
-    // 1. Type (Person)
-    // 2. Entity (Elon)
-    // 3. Link
-    expect(mocks.db.insert).toHaveBeenCalledTimes(3);
+    // Verify insert count: only link inserted (episodesEntities)
+    expect(mocks.db.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it("should create new entity with embedding if no match found", async () => {
+     // Setup Transcript
+    mocks.db.query.transcripts.findFirst.mockResolvedValue({
+      episodeId: "ep1",
+      content: "Hello",
+      segments: [],
+    });
+
+    mocks.generateObject.mockResolvedValue({
+      object: { entities: [{ name: "New Entity", type: "Person" }] },
+    });
+    mocks.db.query.entityTypes.findFirst.mockResolvedValue({ id: "type_person" });
+
+    // Entity Exact Match: Not found in findMany
+    mocks.db.query.entities.findMany.mockResolvedValue([]);
+
+    mocks.generateEmbedding.mockResolvedValue([0.9, 0.9]);
+
+    // Vector search returns no results
+    mocks.db.run.mockResolvedValue({ rows: [] });
+
+    await extractEntitiesHandler(createMockJob({ episodeId: "ep1" }));
+
+    // Expect insert entity + insert link = 2 inserts
+    expect(mocks.db.insert).toHaveBeenCalledTimes(2);
+
+    // Check that embedding was passed to insert values
+    const firstInsertValues = mockValues.mock.calls[0][0];
+    expect(firstInsertValues).toHaveProperty("embedding");
+    expect(firstInsertValues.embedding).toEqual([0.9, 0.9]);
+    expect(firstInsertValues.name).toBe("New Entity");
+  });
+
+  it("should reuse exact match found in pre-fetch", async () => {
+    mocks.db.query.transcripts.findFirst.mockResolvedValue({
+      episodeId: "ep1",
+      content: "Hello",
+      segments: [],
+    });
+
+    mocks.generateObject.mockResolvedValue({
+      object: { entities: [{ name: "Existing Entity", type: "Person" }] },
+    });
+    mocks.db.query.entityTypes.findFirst.mockResolvedValue({ id: "type_person" });
+
+    // Pre-fetch finds existing entity
+    mocks.db.query.entities.findMany.mockResolvedValue([{ id: "exact_id", name: "Existing Entity" }]);
+
+    await extractEntitiesHandler(createMockJob({ episodeId: "ep1" }));
+
+    // Should NOT generate embedding
+    expect(mocks.generateEmbedding).not.toHaveBeenCalled();
+
+    // Should NOT vector search
+    expect(mocks.db.run).not.toHaveBeenCalled();
+
+    // Should insert Link only (1 insert)
+    expect(mocks.db.insert).toHaveBeenCalledTimes(1);
   });
 });
