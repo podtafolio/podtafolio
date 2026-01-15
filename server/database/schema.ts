@@ -8,10 +8,11 @@ import {
   customType,
 } from "drizzle-orm/sqlite-core";
 import { ulid } from "ulid";
+import { EMBEDDING_DIMENSIONS } from "../utils/constants";
 
 const float32Array = customType<{ data: number[]; driverData: Buffer }>({
   dataType() {
-    return "F32_BLOB(768)";
+    return `F32_BLOB(${EMBEDDING_DIMENSIONS})`;
   },
   fromDriver(value: Buffer) {
     return Array.from(
