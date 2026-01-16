@@ -8,7 +8,8 @@ vi.mock("../../../server/utils/itunes", () => ({
 }));
 
 vi.mock("../../../server/utils/podcastService", () => ({
-  findPodcastsByTermOrFeedUrls: vi.fn(),
+  findPodcastsByTerm: vi.fn(),
+  findPodcastsByFeedUrls: vi.fn(),
 }));
 
 vi.mock("h3", async () => {
@@ -21,7 +22,10 @@ vi.mock("h3", async () => {
 
 // We need to import these to mock them or use them in assertions
 import { searchPodcasts } from "../../../server/utils/itunes";
-import { findPodcastsByTermOrFeedUrls } from "../../../server/utils/podcastService";
+import {
+  findPodcastsByTerm,
+  findPodcastsByFeedUrls,
+} from "../../../server/utils/podcastService";
 import { getQuery } from "h3";
 
 describe("Search API", () => {
@@ -48,7 +52,7 @@ describe("Search API", () => {
     ];
     vi.mocked(searchPodcasts).mockResolvedValue(itunesResults as any);
 
-    const localResults = [
+    const localTermResults = [
       {
         id: "1",
         title: "Pod A",
@@ -60,19 +64,17 @@ describe("Search API", () => {
         websiteUrl: "web",
       },
     ];
-    vi.mocked(findPodcastsByTermOrFeedUrls).mockResolvedValue(
-      localResults as any,
-    );
+    vi.mocked(findPodcastsByTerm).mockResolvedValue(localTermResults as any);
+    vi.mocked(findPodcastsByFeedUrls).mockResolvedValue([]);
 
     // Execute
     const response: any = await searchHandler({} as any);
 
     // Verify
     expect(searchPodcasts).toHaveBeenCalledWith(term);
-    expect(findPodcastsByTermOrFeedUrls).toHaveBeenCalledWith(term, [
-      "http://a.com",
-      "http://b.com",
-    ]);
+    expect(findPodcastsByTerm).toHaveBeenCalledWith(term);
+    // Since "http://a.com" was found in localTermResults, we only need to check "http://b.com"
+    expect(findPodcastsByFeedUrls).toHaveBeenCalledWith(["http://b.com"]);
 
     expect(response).toHaveLength(2);
 
@@ -107,15 +109,19 @@ describe("Search API", () => {
         status: "importing",
       },
     ];
-    vi.mocked(findPodcastsByTermOrFeedUrls).mockResolvedValue(
-      localResults as any,
-    );
+    vi.mocked(findPodcastsByTerm).mockResolvedValue(localResults as any);
+    vi.mocked(findPodcastsByFeedUrls).mockResolvedValue([]);
 
     const response: any = await searchHandler({} as any);
 
     expect(response).toHaveLength(1);
     expect(response[0].title).toBe("Local Only");
-    // Should still call local search with empty feed list
-    expect(findPodcastsByTermOrFeedUrls).toHaveBeenCalledWith(term, []);
+
+    // iTunes failed, so itunesResults is [].
+    // localFeedUrls = ["http://local.com"].
+    // itunesFeedUrls = [].
+    // feedUrlsToCheck = [].
+    // findPodcastsByFeedUrls should NOT be called (or checked if length > 0)
+    expect(findPodcastsByFeedUrls).not.toHaveBeenCalled();
   });
 });

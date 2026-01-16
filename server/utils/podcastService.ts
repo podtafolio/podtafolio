@@ -143,3 +143,31 @@ export async function findPodcastsByTermOrFeedUrls(
 
   return await db.select().from(podcasts).where(finalCondition);
 }
+
+/**
+ * Searches for podcasts in the local database by term only.
+ *
+ * @param term Search term for title or author
+ */
+export async function findPodcastsByTerm(term: string) {
+  const searchCondition = or(
+    like(podcasts.title, `%${term}%`),
+    like(podcasts.author, `%${term}%`),
+  );
+  return await db.select().from(podcasts).where(searchCondition);
+}
+
+/**
+ * Searches for podcasts in the local database by feed URLs only.
+ *
+ * @param feedUrls List of feed URLs to check for existence
+ */
+export async function findPodcastsByFeedUrls(feedUrls: string[]) {
+  if (feedUrls.length === 0) {
+    return [];
+  }
+  return await db
+    .select()
+    .from(podcasts)
+    .where(inArray(podcasts.feedUrl, feedUrls));
+}

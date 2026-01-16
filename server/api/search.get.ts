@@ -1,6 +1,10 @@
 import { getQuery, createError } from "h3";
 import { searchPodcasts as searchItunes } from "../utils/itunes";
-import { findPodcastsByTermOrFeedUrls } from "../utils/podcastService";
+import {
+  findPodcastsByTermOrFeedUrls,
+  findPodcastsByTerm,
+  findPodcastsByFeedUrls,
+} from "../utils/podcastService";
 import { CACHE_GROUP, CACHE_NAMES } from "../utils/cache";
 
 export default defineCachedEventHandler(
@@ -16,33 +20,57 @@ export default defineCachedEventHandler(
     }
 
     try {
-      // 1. Search iTunes (handle errors gracefully)
-      let itunesResults: any[] = [];
-      try {
-        itunesResults = await searchItunes(term);
-      } catch (e) {
-        console.warn(
-          "iTunes search failed, proceeding with local search only:",
-          e,
-        );
-      }
+      // 1. Parallel Execution: Search iTunes AND Local DB (by term) simultaneously
+      const [itunesResults, localTermResults] = await Promise.all([
+        // Task A: iTunes Search
+        (async () => {
+          try {
+            return await searchItunes(term);
+          } catch (e) {
+            console.warn(
+              "iTunes search failed, proceeding with local search only:",
+              e,
+            );
+            return [];
+          }
+        })(),
+        // Task B: Local DB Search (by term only)
+        findPodcastsByTerm(term),
+      ]);
 
-      // 2. Extract feed URLs from iTunes results to find matches in DB
+      // 2. Identify missing local podcasts that match iTunes results
+      // We have local results by TERM.
+      // We have iTunes results.
+      // iTunes results might point to podcasts we HAVE locally, but didn't match the TERM.
+      // (e.g. term="JRE", Local Title="Joe Rogan", iTunes Result="Joe Rogan" w/ feedUrl)
+
+      // Collect feed URLs from iTunes results
       const itunesFeedUrls = itunesResults
         .map((p) => p.feedUrl)
         .filter((url): url is string => !!url);
 
-      // 3. Search Local DB (by term OR by matching feed URLs from iTunes)
-      const localResults = await findPodcastsByTermOrFeedUrls(
-        term,
-        itunesFeedUrls,
+      // Collect feed URLs we already found locally
+      const localFeedUrls = new Set(localTermResults.map((p) => p.feedUrl));
+
+      // Filter for feed URLs we need to check (those from iTunes not yet found locally)
+      const feedUrlsToCheck = itunesFeedUrls.filter(
+        (url) => !localFeedUrls.has(url),
       );
 
-      // 4. Merge Logic
-      // Create a map of local podcasts by feedUrl for easy lookup
-      const localMap = new Map<string, (typeof localResults)[0]>();
+      // 3. Second Local DB Search (by missing feed URLs)
+      let additionalLocalResults: typeof localTermResults = [];
+      if (feedUrlsToCheck.length > 0) {
+        additionalLocalResults = await findPodcastsByFeedUrls(feedUrlsToCheck);
+      }
 
-      const formattedLocalResults = localResults.map((p) => {
+      // 4. Merge Local Results
+      const allLocalResults = [...localTermResults, ...additionalLocalResults];
+
+      // 5. Merge Logic (same as before)
+      // Create a map of local podcasts by feedUrl for easy lookup
+      const localMap = new Map<string, (typeof allLocalResults)[0]>();
+
+      const formattedLocalResults = allLocalResults.map((p) => {
         if (p.feedUrl) {
           localMap.set(p.feedUrl, p);
         }
@@ -69,7 +97,7 @@ export default defineCachedEventHandler(
           isImported: false,
         }));
 
-      // 5. Return combined list (Local matches first)
+      // 6. Return combined list (Local matches first)
       return [...formattedLocalResults, ...uniqueItunesResults];
     } catch (error: any) {
       // If it's already a H3 error (created by createError), rethrow it
