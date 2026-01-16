@@ -80,7 +80,7 @@
             v-else-if="summaryData?.data"
             class="prose dark:prose-invert max-w-none break-words"
           >
-            <div v-html="md.render(summaryData.data.content)"></div>
+            <div v-html="renderedSummary"></div>
           </div>
 
           <div v-else class="text-gray-500 italic text-center py-8">
@@ -193,7 +193,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script lang="ts">
 import MarkdownIt from "markdown-it";
 import markdownitFootnote from "markdown-it-footnote";
 
@@ -202,6 +202,9 @@ const md = new MarkdownIt({
   linkify: true,
   typographer: true,
 }).use(markdownitFootnote);
+</script>
+
+<script setup lang="ts">
 const route = useRoute();
 const id = route.params.id as string;
 const toast = useToast();
@@ -239,6 +242,13 @@ const {
   key: `entities-${id}`,
   server: false,
   lazy: true,
+});
+
+const renderedSummary = computed(() => {
+  if (summaryData.value?.data?.content) {
+    return md.render(summaryData.value.data.content);
+  }
+  return "";
 });
 
 const transcribing = ref(false);
