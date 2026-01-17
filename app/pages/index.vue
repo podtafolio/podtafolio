@@ -106,6 +106,9 @@
 </template>
 
 <script setup lang="ts">
-const { data: podcasts, status } = await useFetch("/api/podcasts");
-const { data: topics } = await useFetch("/api/topics/trending");
+// Parallelize data fetching
+const [{ data: podcasts, status }, { data: topics }] = await Promise.all([
+  useFetch("/api/podcasts"),
+  useFetch("/api/topics/trending"),
+]);
 </script>

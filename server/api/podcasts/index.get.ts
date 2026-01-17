@@ -16,20 +16,17 @@ export default defineCachedEventHandler(
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // Count total
-    const [{ value: total }] = await db
-      .select({ value: count() })
-      .from(podcasts)
-      .where(whereClause);
-
-    // Fetch data
-    const data = await db
-      .select()
-      .from(podcasts)
-      .where(whereClause)
-      .limit(limit)
-      .offset(offset)
-      .orderBy(asc(podcasts.title));
+    // Execute queries in parallel
+    const [[{ value: total }], data] = await Promise.all([
+      db.select({ value: count() }).from(podcasts).where(whereClause),
+      db
+        .select()
+        .from(podcasts)
+        .where(whereClause)
+        .limit(limit)
+        .offset(offset)
+        .orderBy(asc(podcasts.title)),
+    ]);
 
     return createPaginatedResponse(data, total, pagination);
   },
