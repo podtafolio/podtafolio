@@ -1,0 +1,1 @@
+ALTER TABLE `topics` ADD `embedding` F32_BLOB(768);

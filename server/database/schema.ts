@@ -183,6 +183,7 @@ export const topics = sqliteTable("topics", {
     .primaryKey()
     .$defaultFn(() => ulid()),
   name: text("name").notNull().unique(),
+  embedding: float32Array("embedding"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
