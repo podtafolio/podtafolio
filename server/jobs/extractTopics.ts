@@ -1,10 +1,11 @@
 import { db } from "../utils/db";
 import { transcripts, topics, episodesTopics } from "../database/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { google } from "../utils/ai";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { Job } from "bullmq";
+import { generateEmbedding } from "../utils/embeddings";
 
 export interface ExtractTopicsPayload {
   episodeId: string;
@@ -73,47 +74,107 @@ export async function extractTopicsHandler(job: Job<ExtractTopicsPayload>) {
     );
 
     // 4. Upsert Topics and Link
-    for (const topicName of extractedTopics) {
-      const normalizedName = topicName.trim();
+
+    // Deduplicate extracted topics
+    const uniqueTopics = Array.from(
+      new Set(extractedTopics.map((t) => t.trim())),
+    );
+
+    // Fetch existing topics (Exact Match)
+    const existingTopics = await db.query.topics.findMany({
+      where: inArray(topics.name, uniqueTopics),
+    });
+    const topicMap = new Map(existingTopics.map((t) => [t.name, t]));
+
+    // Identify needed embeddings
+    const needsEmbedding = uniqueTopics.filter((name) => !topicMap.has(name));
+
+    await job.log(
+      `[Topics] ${existingTopics.length} exact matches. Generating embeddings for ${needsEmbedding.length} candidates.`,
+    );
+
+    // Generate Embeddings
+    const embeddingsMap = new Map<string, number[]>();
+    await Promise.all(
+      needsEmbedding.map(async (name) => {
+        try {
+          const emb = await generateEmbedding(name);
+          embeddingsMap.set(name, emb);
+        } catch (e) {
+          await job.log(
+            `[Topics] Warning: Failed to generate embedding for ${name}: ${String(e)}`,
+          );
+        }
+      }),
+    );
+
+    for (const topicName of uniqueTopics) {
       let topicId: string;
 
-      const existingTopic = await db.query.topics.findFirst({
-        where: eq(topics.name, normalizedName),
-      });
-
-      if (existingTopic) {
-        topicId = existingTopic.id;
+      if (topicMap.has(topicName)) {
+        topicId = topicMap.get(topicName)!.id;
       } else {
-        try {
-          const [inserted] = await db
-            .insert(topics)
-            .values({
-              name: normalizedName,
-            })
-            .returning({ id: topics.id });
-          topicId = inserted.id;
-        } catch (e) {
-          const retry = await db.query.topics.findFirst({
-            where: eq(topics.name, normalizedName),
-          });
-          if (retry) {
-            topicId = retry.id;
-          } else {
-            await job.log(
-              `[Topics] Failed to insert topic ${normalizedName}: ${String(e)}`,
+        // Fuzzy Search
+        let vectorMatchId: string | null = null;
+        const embedding = embeddingsMap.get(topicName);
+
+        if (embedding) {
+          try {
+            const embeddingString = JSON.stringify(embedding);
+            const result = await db.run(
+              sql`SELECT topics.id, vector_distance_cos(topics.embedding, vector(${embeddingString})) as distance
+                            FROM vector_top_k('topics_embedding_idx', vector(${embeddingString}), 1) as v
+                            JOIN topics ON topics.rowid = v.id
+                            WHERE distance < 0.35`,
             );
-            continue;
+            if (result.rows && result.rows.length > 0) {
+              const bestMatch = result.rows[0] as any;
+              await job.log(
+                `[Topics] Fuzzy match: "${topicName}" -> ID ${bestMatch.id} (dist: ${bestMatch.distance})`,
+              );
+              vectorMatchId = bestMatch.id;
+            }
+          } catch (err) {
+            await job.log(
+              `[Topics] Warning: Vector search failed for "${topicName}": ${String(err)}`,
+            );
+          }
+        }
+
+        if (vectorMatchId) {
+          topicId = vectorMatchId;
+        } else {
+          // Insert New
+          try {
+            const [inserted] = await db
+              .insert(topics)
+              .values({
+                name: topicName,
+                embedding: embedding,
+              })
+              .returning({ id: topics.id });
+            topicId = inserted.id;
+          } catch (e) {
+            // Retry logic for race conditions
+            const retry = await db.query.topics.findFirst({
+              where: eq(topics.name, topicName),
+            });
+            if (retry) {
+              topicId = retry.id;
+            } else {
+              await job.log(
+                `[Topics] Failed to insert topic ${topicName}: ${String(e)}`,
+              );
+              continue;
+            }
           }
         }
       }
 
-      // Link to Episode
+      // Link
       await db
         .insert(episodesTopics)
-        .values({
-          episodeId,
-          topicId,
-        })
+        .values({ episodeId, topicId })
         .onConflictDoNothing();
     }
 
