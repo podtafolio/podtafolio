@@ -99,6 +99,13 @@
       "when": 1768473821965,
       "tag": "0013_sharp_romulus",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1768665944696,
+      "tag": "0014_add_vector_index",
+      "breakpoints": true
     }
   ]
 }
