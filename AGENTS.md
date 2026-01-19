@@ -18,14 +18,17 @@
 - **Status**: Active Development.
 - **Backend**: Nuxt 4 Server (Nitro).
 - **Database**: Turso (LibSQL) with Drizzle ORM.
-- **Async Processing**: Custom SQLite-backed job queue (`jobs` table) + Nitro Worker Plugin.
-- **AI**: Groq API (Whisper Large v3) for transcriptions.
+- **Async Processing**: **BullMQ** (Redis) for robust background job processing.
+- **AI**:
+  - **Groq API** (Whisper Large v3) for high-fidelity transcriptions.
+  - **Google Generative AI** (Gemini) for embeddings, summaries, and entity extraction.
 
 ## Tech Stack
 
 - **Framework**: [Nuxt 4](https://nuxt.com)
 - **UI Framework**: [Nuxt UI](https://ui.nuxt.com)
 - **Database**: Drizzle ORM + Turso
+- **Queue**: BullMQ + Redis
 - **Testing**: Vitest + Happy DOM
 
 ## Developer Guidelines
@@ -83,21 +86,22 @@ When testing API handlers that import local utilities (e.g., `server/utils/cache
 
 ### Async Jobs & Background Workers
 
-- **Location**: `server/jobs/` contains job definitions.
-- **Worker**: `server/plugins/worker.ts` is the polling worker that processes jobs.
-- **Tasks**: `server/tasks/` contains scheduled Nitro tasks (e.g., `sync-podcasts`).
-- **Adding a Job**: Register the job type and handler in `server/jobs/index.ts`.
+- **Engine**: **BullMQ** (backed by Redis).
+- **Location**: `server/jobs/` contains job handlers.
+- **Job Definitions**: `server/jobs/keys.ts` defines job names and types.
+- **Dashboard**: A BullMQ dashboard is available at `/admin/queues` (requires admin auth in production).
+- **Scheduled Tasks**: `server/tasks/` contains scheduled Nitro tasks (e.g., `sync-podcasts`).
 
 ## Directory Structure
 
 - `app/`: Frontend (Nuxt UI, Pages, Components).
 - `server/`: Backend.
   - `database/`: Schema & Migrations.
-  - `jobs/`: Job definitions.
+  - `jobs/`: Job handlers and configuration.
   - `tasks/`: Scheduled tasks.
-  - `utils/`: Shared logic (iTunes, Parsing, Cache).
+  - `utils/`: Shared logic (AI, Redis, Queue, iTunes, Parsing).
 - `tests/`: Vitest suite.
 
 ## Future Implementation Notes
 
-- **AI Services**: Summaries and Deep Analysis are planned. Implement them as modular services in `server/utils/ai/`.
+- **AI Services**: Continue refining summaries and deep analysis services in `server/utils/ai.ts` and `server/utils/embeddings.ts`.
