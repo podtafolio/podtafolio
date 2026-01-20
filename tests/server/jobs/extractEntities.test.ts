@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => {
         },
         entityTypes: {
           findFirst: vi.fn(),
+          findMany: vi.fn(),
         },
       },
       insert: vi.fn(),
@@ -101,6 +102,7 @@ describe("extractEntitiesHandler", () => {
 
     // Default: findMany returns empty array
     mocks.db.query.entities.findMany.mockResolvedValue([]);
+    mocks.db.query.entityTypes.findMany.mockResolvedValue([]);
   });
 
   it("should use vector search if exact match fails", async () => {
@@ -119,7 +121,7 @@ describe("extractEntitiesHandler", () => {
     });
 
     // Type found
-    mocks.db.query.entityTypes.findFirst.mockResolvedValue({ id: "type_person" });
+    mocks.db.query.entityTypes.findMany.mockResolvedValue([{ id: "type_person", name: "Person" }]);
 
     // Entity Exact Match: Not found in findMany
     mocks.db.query.entities.findMany.mockResolvedValue([]);
@@ -155,7 +157,7 @@ describe("extractEntitiesHandler", () => {
     mocks.generateObject.mockResolvedValue({
       object: { entities: [{ name: "New Entity", type: "Person" }] },
     });
-    mocks.db.query.entityTypes.findFirst.mockResolvedValue({ id: "type_person" });
+    mocks.db.query.entityTypes.findMany.mockResolvedValue([{ id: "type_person", name: "Person" }]);
 
     // Entity Exact Match: Not found in findMany
     mocks.db.query.entities.findMany.mockResolvedValue([]);
@@ -187,7 +189,7 @@ describe("extractEntitiesHandler", () => {
     mocks.generateObject.mockResolvedValue({
       object: { entities: [{ name: "Existing Entity", type: "Person" }] },
     });
-    mocks.db.query.entityTypes.findFirst.mockResolvedValue({ id: "type_person" });
+    mocks.db.query.entityTypes.findMany.mockResolvedValue([{ id: "type_person", name: "Person" }]);
 
     // Pre-fetch finds existing entity
     mocks.db.query.entities.findMany.mockResolvedValue([{ id: "exact_id", name: "Existing Entity" }]);
