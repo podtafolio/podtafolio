@@ -1,7 +1,8 @@
 import { db } from "../utils/db";
-import { podcasts, jobs } from "../database/schema";
-import { eq, and, or, lt, inArray, isNull } from "drizzle-orm";
-import { enqueueJob } from "../utils/queue";
+import { podcasts } from "../database/schema";
+import { eq, and, or, lt, isNull } from "drizzle-orm";
+import { enqueueJob, queues } from "../utils/queue";
+import { JOB_PODCAST_IMPORT } from "../jobs/keys";
 import type { PodcastImportPayload } from "../jobs/podcastImport";
 
 export default defineTask({
@@ -14,22 +15,17 @@ export default defineTask({
 
     try {
       // 1. Get currently active sync jobs to avoid duplicates
-      // We only care about jobs that are pending or processing
-      const activeJobs = await db.query.jobs.findMany({
-        where: (table, { and, eq, inArray }) =>
-          and(
-            eq(table.type, "podcast_import"),
-            inArray(table.status, ["pending", "processing"]),
-          ),
-        columns: {
-          payload: true,
-        },
-      });
+      // We only care about jobs that are active, waiting, or delayed
+      const activeJobs = await queues[JOB_PODCAST_IMPORT].getJobs([
+        "active",
+        "waiting",
+        "delayed",
+      ]);
 
       const activePodcastIds = new Set<string>();
       for (const job of activeJobs) {
-        // Payload is typed as unknown/json, cast it
-        const payload = job.payload as PodcastImportPayload;
+        // Payload is in job.data
+        const payload = job.data as PodcastImportPayload;
         if (payload && payload.podcastId) {
           activePodcastIds.add(payload.podcastId);
         }
@@ -69,7 +65,7 @@ export default defineTask({
           `[Task] Scheduling sync for stale podcast ${podcast.id} (last scraped: ${podcast.lastScrapedAt})`,
         );
 
-        await enqueueJob("podcast_import", {
+        await enqueueJob(JOB_PODCAST_IMPORT, {
           podcastId: podcast.id,
           feedUrl: podcast.feedUrl,
         });
