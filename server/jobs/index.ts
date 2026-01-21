@@ -3,12 +3,14 @@ import { transcribeEpisodeHandler } from "./transcribeEpisode";
 import { summarizeEpisodeHandler } from "./summarizeEpisode";
 import { extractEntitiesHandler } from "./extractEntities";
 import { extractTopicsHandler } from "./extractTopics";
+import { syncPodcastsHandler } from "./syncPodcasts";
 import {
   JOB_PODCAST_IMPORT,
   JOB_EPISODE_TRANSCRIPTION,
   JOB_EPISODE_SUMMARY,
   JOB_EXTRACT_ENTITIES,
   JOB_EXTRACT_TOPICS,
+  JOB_SYNC_PODCASTS,
   type JobType,
 } from "./keys";
 
@@ -33,6 +35,10 @@ export const jobRegistry = {
   [JOB_EXTRACT_TOPICS]: {
     handler: extractTopicsHandler,
     concurrency: 5,
+  },
+  [JOB_SYNC_PODCASTS]: {
+    handler: syncPodcastsHandler,
+    concurrency: 1,
   },
 } as const;
 
