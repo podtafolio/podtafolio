@@ -7,3 +7,11 @@ By splitting the database query into two parts ("search by term" and "search by 
 
 **Action:**
 When optimizing API endpoints that aggregate data from multiple sources (e.g., external APIs + local DB), always check if the operations are truly dependent. If they can be decoupled (even partially), use `Promise.all` to run them concurrently.
+
+## 2024-05-22 - Selective Column Fetching with Drizzle
+
+**Learning:**
+Drizzle ORM's `db.select().from(table)` fetches all columns by default. For tables with large text fields (like `description` or `transcripts`), this can significantly increase payload size and database I/O, especially in list endpoints.
+
+**Action:**
+In list endpoints, explicitly define the columns needed by the frontend using `db.select({ id: table.id, ... })`. This reduces data transfer and improves performance, but requires careful verification of frontend requirements to avoid missing fields.
