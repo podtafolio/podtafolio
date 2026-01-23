@@ -38,20 +38,28 @@ export default defineCachedEventHandler(
 
     const whereClause = and(...conditions);
 
-    // Count total
-    const [{ value: total }] = await db
-      .select({ value: count() })
-      .from(episodes)
-      .where(whereClause);
+    // Run queries in parallel
+    const [totalResult, data] = await Promise.all([
+      db
+        .select({ value: count() })
+        .from(episodes)
+        .where(whereClause),
+      db
+        .select({
+          id: episodes.id,
+          title: episodes.title,
+          publishedAt: episodes.publishedAt,
+          duration: episodes.duration,
+          podcastId: episodes.podcastId,
+        })
+        .from(episodes)
+        .where(whereClause)
+        .limit(limit)
+        .offset(offset)
+        .orderBy(desc(episodes.publishedAt)),
+    ]);
 
-    // Fetch data
-    const data = await db
-      .select()
-      .from(episodes)
-      .where(whereClause)
-      .limit(limit)
-      .offset(offset)
-      .orderBy(desc(episodes.publishedAt));
+    const total = totalResult[0]?.value ?? 0;
 
     return createPaginatedResponse(data, total, pagination);
   },
