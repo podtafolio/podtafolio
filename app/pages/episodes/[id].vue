@@ -56,9 +56,9 @@
             <div class="flex items-center justify-between">
               <h3 class="font-semibold">AI Summary</h3>
               <UButton
-                v-if="!summaryData?.data"
+                v-if="!episode.data.summary"
                 :loading="summarizing"
-                :disabled="!transcriptData?.data"
+                :disabled="!episode.data.transcript"
                 @click="triggerSummary"
                 size="xs"
                 color="primary"
@@ -69,22 +69,15 @@
             </div>
           </template>
 
-          <div v-if="summaryPending" class="py-8 flex justify-center">
-            <UIcon
-              name="i-heroicons-arrow-path"
-              class="animate-spin w-6 h-6 text-gray-400"
-            />
-          </div>
-
           <div
-            v-else-if="summaryData?.data"
+            v-if="episode.data.summary"
             class="prose dark:prose-invert max-w-none break-words"
           >
             <div v-html="renderedSummary"></div>
           </div>
 
           <div v-else class="text-gray-500 italic text-center py-8">
-            <span v-if="!transcriptData?.data"
+            <span v-if="!episode.data.transcript"
               >Generate a transcript first to enable summarization.</span
             >
             <span v-else
@@ -99,9 +92,9 @@
             <div class="flex items-center justify-between">
               <h3 class="font-semibold">Entities</h3>
               <UButton
-                v-if="!entitiesData?.data?.length"
+                v-if="!episode.data.entities?.length"
                 :loading="extracting"
-                :disabled="!transcriptData?.data"
+                :disabled="!episode.data.transcript"
                 @click="triggerExtraction"
                 size="xs"
                 color="primary"
@@ -112,19 +105,12 @@
             </div>
           </template>
 
-          <div v-if="entitiesPending" class="py-8 flex justify-center">
-            <UIcon
-              name="i-heroicons-arrow-path"
-              class="animate-spin w-6 h-6 text-gray-400"
-            />
-          </div>
-
           <div
-            v-else-if="entitiesData?.data?.length"
+            v-if="episode.data.entities?.length"
             class="flex flex-wrap gap-2"
           >
             <UButton
-              v-for="entity in entitiesData.data"
+              v-for="entity in episode.data.entities"
               :key="entity.id"
               :to="`/entities/${entity.id}`"
               size="xs"
@@ -136,7 +122,7 @@
           </div>
 
           <div v-else class="text-gray-500 italic text-center py-8">
-            <span v-if="!transcriptData?.data"
+            <span v-if="!episode.data.transcript"
               >Generate a transcript first to enable entity extraction.</span
             >
             <span v-else
@@ -151,13 +137,13 @@
               <h3 class="font-semibold">Transcript</h3>
               <div class="flex gap-2">
                 <span
-                  v-if="transcriptData?.data?.language"
+                  v-if="episode.data.transcript?.language"
                   class="text-xs font-mono px-2 py-1 rounded bg-gray-100 dark:bg-gray-800"
                 >
-                  {{ transcriptData.data.language.toUpperCase() }}
+                  {{ episode.data.transcript.language.toUpperCase() }}
                 </span>
                 <UButton
-                  v-if="!transcriptData?.data"
+                  v-if="!episode.data.transcript"
                   :loading="transcribing"
                   @click="triggerTranscription"
                   size="xs"
@@ -170,18 +156,11 @@
             </div>
           </template>
 
-          <div v-if="transcriptPending" class="py-8 flex justify-center">
-            <UIcon
-              name="i-heroicons-arrow-path"
-              class="animate-spin w-6 h-6 text-gray-400"
-            />
-          </div>
-
           <div
-            v-else-if="transcriptData?.data"
+            v-if="episode.data.transcript"
             class="prose dark:prose-invert max-w-none break-words whitespace-pre-wrap"
           >
-            {{ transcriptData.data.content }}
+            {{ episode.data.transcript.content }}
           </div>
 
           <div v-else class="text-gray-500 italic text-center py-8">
@@ -211,42 +190,9 @@ const toast = useToast();
 
 const { data: episode, pending, error } = await useFetch(`/api/episodes/${id}`);
 
-// Fetch transcript separately
-const {
-  data: transcriptData,
-  pending: transcriptPending,
-  refresh: refreshTranscript,
-} = await useFetch(`/api/episodes/${id}/transcript`, {
-  key: `transcript-${id}`,
-  server: false,
-  lazy: true,
-});
-
-// Fetch summary separately
-const {
-  data: summaryData,
-  pending: summaryPending,
-  refresh: refreshSummary,
-} = await useFetch(`/api/episodes/${id}/summary`, {
-  key: `summary-${id}`,
-  server: false,
-  lazy: true,
-});
-
-// Fetch entities separately
-const {
-  data: entitiesData,
-  pending: entitiesPending,
-  refresh: refreshEntities,
-} = await useFetch(`/api/episodes/${id}/entities`, {
-  key: `entities-${id}`,
-  server: false,
-  lazy: true,
-});
-
 const renderedSummary = computed(() => {
-  if (summaryData.value?.data?.content) {
-    return md.render(summaryData.value.data.content);
+  if (episode.value?.data?.summary?.content) {
+    return md.render(episode.value.data.summary.content);
   }
   return "";
 });
@@ -333,8 +279,19 @@ function startPolling() {
   let attempts = 0;
   pollInterval = setInterval(async () => {
     attempts++;
-    await refreshTranscript();
-    if (transcriptData.value?.data || attempts > 20) {
+    try {
+      const res = await $fetch<{ data: any }>(
+        `/api/episodes/${id}/transcript`,
+      );
+      if (res.data && episode.value?.data) {
+        episode.value.data.transcript = res.data;
+        if (pollInterval) clearInterval(pollInterval);
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    if (attempts > 20) {
       if (pollInterval) clearInterval(pollInterval);
     }
   }, 3000);
@@ -345,8 +302,17 @@ function startPollingSummary() {
   let attempts = 0;
   summaryPollInterval = setInterval(async () => {
     attempts++;
-    await refreshSummary();
-    if (summaryData.value?.data || attempts > 20) {
+    try {
+      const res = await $fetch<{ data: any }>(`/api/episodes/${id}/summary`);
+      if (res.data && episode.value?.data) {
+        episode.value.data.summary = res.data;
+        if (summaryPollInterval) clearInterval(summaryPollInterval);
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    if (attempts > 20) {
       if (summaryPollInterval) clearInterval(summaryPollInterval);
     }
   }, 3000);
@@ -357,8 +323,17 @@ function startPollingEntities() {
   let attempts = 0;
   entitiesPollInterval = setInterval(async () => {
     attempts++;
-    await refreshEntities();
-    if (entitiesData.value?.data?.length > 0 || attempts > 20) {
+    try {
+      const res = await $fetch<{ data: any[] }>(`/api/episodes/${id}/entities`);
+      if (res.data?.length && episode.value?.data) {
+        episode.value.data.entities = res.data;
+        if (entitiesPollInterval) clearInterval(entitiesPollInterval);
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    if (attempts > 20) {
       if (entitiesPollInterval) clearInterval(entitiesPollInterval);
     }
   }, 3000);
