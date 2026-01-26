@@ -7,3 +7,11 @@ By splitting the database query into two parts ("search by term" and "search by 
 
 **Action:**
 When optimizing API endpoints that aggregate data from multiple sources (e.g., external APIs + local DB), always check if the operations are truly dependent. If they can be decoupled (even partially), use `Promise.all` to run them concurrently.
+
+## 2025-05-23 - Testing Nuxt/Drizzle Auto-Imports in Vitest
+
+**Learning:**
+When unit testing Nuxt server handlers that use auto-imported modules (like `server/utils/db`), Vitest will fail with `ReferenceError` because it doesn't process auto-imports. Explicitly importing the module in the source code fixes it but defeats the purpose of auto-imports.
+
+**Action:**
+Use `vi.stubGlobal('variableName', mockImplementation)` in the test setup to mock auto-imported globals. For Drizzle query chains, ensure the mock implements a fluent interface (`mockReturnThis()`) for all intermediate methods (`select`, `from`, `where`) and returns a Promise (or `mockResolvedValue`) for the terminator methods (`limit`, `orderBy`, `all`, `execute`).
