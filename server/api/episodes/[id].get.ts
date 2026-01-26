@@ -15,6 +15,16 @@ export default defineCachedEventHandler(
 
     const episode = await db.query.episodes.findFirst({
       where: eq(episodes.id, id),
+      with: {
+        podcast: true,
+        transcript: true,
+        summary: true,
+        episodesEntities: {
+          with: {
+            entity: true,
+          },
+        },
+      },
     });
 
     if (!episode) {
@@ -24,7 +34,19 @@ export default defineCachedEventHandler(
       });
     }
 
-    return { data: episode };
+    // Flatten entities for easier consumption
+    const entities = episode.episodesEntities.map((ee) => ee.entity);
+
+    // Structure the response to match what the frontend expects,
+    // merging the separate data into the main object
+    return {
+      data: {
+        ...episode,
+        entities, // Provide flattened entities
+        // remove the intermediate relation array
+        episodesEntities: undefined,
+      },
+    };
   },
   {
     group: CACHE_GROUP,

@@ -7,6 +7,7 @@ import {
   primaryKey,
   customType,
 } from "drizzle-orm/sqlite-core";
+import { relations } from "drizzle-orm";
 import { ulid } from "ulid";
 import { EMBEDDING_DIMENSIONS } from "../utils/constants";
 
@@ -209,5 +210,75 @@ export const episodesTopics = sqliteTable(
     pk: primaryKey({ columns: [table.episodeId, table.topicId] }),
     episodeIdIdx: index("episodes_topics_episode_id_idx").on(table.episodeId),
     topicIdIdx: index("episodes_topics_topic_id_idx").on(table.topicId),
+  }),
+);
+
+// Relations
+export const episodesRelations = relations(episodes, ({ one, many }) => ({
+  podcast: one(podcasts, {
+    fields: [episodes.podcastId],
+    references: [podcasts.id],
+  }),
+  transcript: one(transcripts),
+  summary: one(summaries),
+  episodesEntities: many(episodesEntities),
+  episodesTopics: many(episodesTopics),
+}));
+
+export const podcastsRelations = relations(podcasts, ({ many }) => ({
+  episodes: many(episodes),
+}));
+
+export const transcriptsRelations = relations(transcripts, ({ one }) => ({
+  episode: one(episodes, {
+    fields: [transcripts.episodeId],
+    references: [episodes.id],
+  }),
+}));
+
+export const summariesRelations = relations(summaries, ({ one }) => ({
+  episode: one(episodes, {
+    fields: [summaries.episodeId],
+    references: [episodes.id],
+  }),
+}));
+
+export const entitiesRelations = relations(entities, ({ one, many }) => ({
+  type: one(entityTypes, {
+    fields: [entities.typeId],
+    references: [entityTypes.id],
+  }),
+  episodesEntities: many(episodesEntities),
+}));
+
+export const episodesEntitiesRelations = relations(
+  episodesEntities,
+  ({ one }) => ({
+    episode: one(episodes, {
+      fields: [episodesEntities.episodeId],
+      references: [episodes.id],
+    }),
+    entity: one(entities, {
+      fields: [episodesEntities.entityId],
+      references: [entities.id],
+    }),
+  }),
+);
+
+export const topicsRelations = relations(topics, ({ many }) => ({
+  episodesTopics: many(episodesTopics),
+}));
+
+export const episodesTopicsRelations = relations(
+  episodesTopics,
+  ({ one }) => ({
+    episode: one(episodes, {
+      fields: [episodesTopics.episodeId],
+      references: [episodes.id],
+    }),
+    topic: one(topics, {
+      fields: [episodesTopics.topicId],
+      references: [topics.id],
+    }),
   }),
 );
