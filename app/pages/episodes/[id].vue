@@ -56,9 +56,9 @@
             <div class="flex items-center justify-between">
               <h3 class="font-semibold">AI Summary</h3>
               <UButton
-                v-if="!summaryData?.data"
+                v-if="!summary"
                 :loading="summarizing"
-                :disabled="!transcriptData?.data"
+                :disabled="!transcript"
                 @click="triggerSummary"
                 size="xs"
                 color="primary"
@@ -77,14 +77,14 @@
           </div>
 
           <div
-            v-else-if="summaryData?.data"
+            v-else-if="summary"
             class="prose dark:prose-invert max-w-none break-words"
           >
             <div v-html="renderedSummary"></div>
           </div>
 
           <div v-else class="text-gray-500 italic text-center py-8">
-            <span v-if="!transcriptData?.data"
+            <span v-if="!transcript"
               >Generate a transcript first to enable summarization.</span
             >
             <span v-else
@@ -99,9 +99,9 @@
             <div class="flex items-center justify-between">
               <h3 class="font-semibold">Entities</h3>
               <UButton
-                v-if="!entitiesData?.data?.length"
+                v-if="!entities?.length"
                 :loading="extracting"
-                :disabled="!transcriptData?.data"
+                :disabled="!transcript"
                 @click="triggerExtraction"
                 size="xs"
                 color="primary"
@@ -120,11 +120,11 @@
           </div>
 
           <div
-            v-else-if="entitiesData?.data?.length"
+            v-else-if="entities?.length"
             class="flex flex-wrap gap-2"
           >
             <UButton
-              v-for="entity in entitiesData.data"
+              v-for="entity in entities"
               :key="entity.id"
               :to="`/entities/${entity.id}`"
               size="xs"
@@ -136,7 +136,7 @@
           </div>
 
           <div v-else class="text-gray-500 italic text-center py-8">
-            <span v-if="!transcriptData?.data"
+            <span v-if="!transcript"
               >Generate a transcript first to enable entity extraction.</span
             >
             <span v-else
@@ -151,13 +151,13 @@
               <h3 class="font-semibold">Transcript</h3>
               <div class="flex gap-2">
                 <span
-                  v-if="transcriptData?.data?.language"
+                  v-if="transcript?.language"
                   class="text-xs font-mono px-2 py-1 rounded bg-gray-100 dark:bg-gray-800"
                 >
-                  {{ transcriptData.data.language.toUpperCase() }}
+                  {{ transcript.language.toUpperCase() }}
                 </span>
                 <UButton
-                  v-if="!transcriptData?.data"
+                  v-if="!transcript"
                   :loading="transcribing"
                   @click="triggerTranscription"
                   size="xs"
@@ -178,10 +178,10 @@
           </div>
 
           <div
-            v-else-if="transcriptData?.data"
+            v-else-if="transcript"
             class="prose dark:prose-invert max-w-none break-words whitespace-pre-wrap"
           >
-            {{ transcriptData.data.content }}
+            {{ transcript.content }}
           </div>
 
           <div v-else class="text-gray-500 italic text-center py-8">
@@ -211,7 +211,7 @@ const toast = useToast();
 
 const { data: episode, pending, error } = await useFetch(`/api/episodes/${id}`);
 
-// Fetch transcript separately
+// Fetch transcript separately (only for polling)
 const {
   data: transcriptData,
   pending: transcriptPending,
@@ -220,9 +220,10 @@ const {
   key: `transcript-${id}`,
   server: false,
   lazy: true,
+  immediate: false,
 });
 
-// Fetch summary separately
+// Fetch summary separately (only for polling)
 const {
   data: summaryData,
   pending: summaryPending,
@@ -231,9 +232,10 @@ const {
   key: `summary-${id}`,
   server: false,
   lazy: true,
+  immediate: false,
 });
 
-// Fetch entities separately
+// Fetch entities separately (only for polling)
 const {
   data: entitiesData,
   pending: entitiesPending,
@@ -242,11 +244,17 @@ const {
   key: `entities-${id}`,
   server: false,
   lazy: true,
+  immediate: false,
 });
 
+// Computed properties to merge initial data with polled data
+const transcript = computed(() => transcriptData.value?.data || episode.value?.data?.transcript);
+const summary = computed(() => summaryData.value?.data || episode.value?.data?.summary);
+const entities = computed(() => entitiesData.value?.data || episode.value?.data?.entities);
+
 const renderedSummary = computed(() => {
-  if (summaryData.value?.data?.content) {
-    return md.render(summaryData.value.data.content);
+  if (summary.value?.content) {
+    return md.render(summary.value.content);
   }
   return "";
 });
